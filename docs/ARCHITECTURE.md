@@ -42,6 +42,12 @@ We implement **OpenTelemetry** as the universal instrumentation layer. We track 
 Standard HPA scales on CPU/Memory. In the energy sector, a service might be idle but have a massive backlog (e.g., during a grid "Demand Response" event). 
 *   **Decision:** We use a `Custom Metrics API` to scale based on `kafka_consumergroup_lag`. If the lag exceeds 10,000 messages, Kubernetes spins up additional pods to "drain the swamp."
 
+### 3.4 Automated Quality Gates
+To minimize cognitive load and prevent "unforced errors," the platform enforces the following gates:
+*   **Static Analysis (The Inspector):** Use `Ruff` and `MyPy` to enforce type safety and catch logical errors before they reach the human review stage.
+*   **Schema Validation:** Automated CI checks to ensure no PR introduces a breaking Avro schema change (checked against the Glue/Confluent Schema Registry).
+*   **PR Metadata Enforcement:** A GitHub Action that validates the PR header for "Safety Impact" and "Grid Impact" fields, preventing merges that bypass the Change Control process.
+
 ---
 
 ## 4. Security & Compliance (Regulated Context)
@@ -57,3 +63,25 @@ Standard HPA scales on CPU/Memory. In the energy sector, a service might be idle
 | **Schema Mismatch** | Consumer Crash | Schema Registry enforcement + CI-integrated `avro-lint`. |
 | **Kafka Outage** | Data Loss | Producer-side buffering (Circuit Breaker) + Persistent Volumes. |
 | **Traffic Spike** | System Saturation | HPA based on Consumer Lag + Priority-based rate limiting. |
+
+---
+
+## 6. Safety-Critical Design & Failure Modes
+
+### 6.1 Ethical Load Management (The "Wet Bulb" Protocol)
+GridCorp's role in grid stability involves high-stakes trade-offs. The platform must distinguish between "discretionary" load (e.g., a pool pump) and "life-sustaining" load (e.g., medical equipment or cooling during extreme heat).
+
+*   **Critical Asset Tagging:** Our Pydantic data models include a `priority_level` attribute derived from the Utility’s Customer Information System (CIS). 
+*   **Safety Interlocks:** The ingestion engine is designed with "Fail-Open" logic. If the platform loses connectivity or cannot guarantee a safe dispatch state during a heatwave (defined by local weather API integration), it is programmed to default to "Grid-Follow" mode rather than "Aggressive Load Shed."
+
+### 6.2 Fail-Safe State Management
+In SCADA and IoT, "No Data" can be more dangerous than "Bad Data."
+*   **State Persistence:** We use Redis to cache the "Last Known Good State" of the grid. If the Kafka pipeline experiences a latency spike (Lag > Threshold), the system triggers a **Safety Freeze**, preventing any new "Off" commands from being sent to devices until the observability gap is closed.
+*   **Human-in-the-Loop (HITL):** For high-impact SCADA switches, the platform serves as a recommendation engine requiring manual operator sign-off, whereas low-risk consumer IoT is fully automated.
+
+### 6.3 Resilience vs. Efficiency
+| Scenario | Platform Action | Safety Justification |
+| :--- | :--- | :--- |
+| **High Wet-Bulb Temp** | Suspend Demand Response | Preventing heat-stroke in vulnerable populations overrides grid-saving credits. |
+| **Hospital Circuit Detected** | Hard-Exclusion | Automated tagging prevents the platform from ever requesting a load-drop on registered life-safety circuits. |
+| **Telemetry Loss** | Stop Automation | We cannot control what we cannot see. The system defaults to the safest physical state. |

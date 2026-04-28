@@ -8,6 +8,8 @@
 
 The project demonstrates how to standardize globally distributed telemetry (SCADA & IoT) using **Kafka**, **Kubernetes**, and **OpenTelemetry**.
 
+For a deep dive into the system design, scaling strategy, and SCADA integration patterns, see our [Architecture Documentation](./docs/ARCHITECTURE.md) and [ADRs](.docs/adr/).
+
 ---
 
 ## 1. Problem Statement

@@ -1,0 +1,8 @@
+# Global owners
+*       @sooperD00
+
+# The Platform team must approve any infra changes
+/charts/  @sooperD00 @gridcorp-platform-leads
+
+# Data Architects must approve schema changes
+/schemas/ @sooperD00 @gridcorp-data-stewards
