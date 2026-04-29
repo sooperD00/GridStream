@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Manual code review is inconsistent and prone to human error, especially across distributed teams (US/Poland). In a high-stakes grid environment, we cannot rely on "best efforts" to ensure code quality and schema compatibility.
+Manual code review is inconsistent and prone to human error, especially across distributed teams (US/Denmark). In a high-stakes grid environment, we cannot rely on "best efforts" to ensure code quality and schema compatibility.
 
 ## Decision
 We will implement "Shift-Left" quality gates:

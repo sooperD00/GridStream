@@ -1,7 +1,7 @@
 # Architecture Design: Project GridStream
 
 ## 1. System Philosophy
-GridStream is designed to solve the "Post-Acquisition Chaos" common in tech mergers. We prioritize **decoupling** and **contract enforcement** to allow the legacy AutoGrid (SCADA) and Kraken (Retail/Consumer) systems to coexist while moving toward a unified data platform.
+GridStream is designed to solve the "Post-Acquisition Chaos" common in tech mergers. We prioritize **decoupling** and **contract enforcement** to allow legacy SCADA-heritage and consumer-platform-heritage systems to coexist while moving toward a unified data platform.
 
 ## 2. Component Diagram
 
@@ -28,9 +28,9 @@ GridStream is designed to solve the "Post-Acquisition Chaos" common in tech merg
 ## 3. The "Staff" Pillars
 
 ### 3.1 Standardization (The "Paved Road")
-To manage globally distributed teams (USA and Poland), we provide a **Shared Helm Library**. 
+To manage globally distributed teams (USA, EU, and India), we provide a **Shared Helm Library**. 
 *   Instead of each team writing their own Kubernetes YAML, they inherit a template that includes pre-configured **Liveness/Readiness probes**, **Resource Limits**, and **Security Contexts**.
-*   This reduces "Configuration Drift" and ensures a Polish developer's service behaves identically to a US developer's service in production.
+*   This reduces "Configuration Drift" and ensures a Danish developer's service behaves identically to a US developer's service in production.
 
 ### 3.2 Observability & SLIs
 We implement **OpenTelemetry** as the universal instrumentation layer. We track the following "Staff-level" metrics:

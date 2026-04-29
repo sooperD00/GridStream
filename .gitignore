@@ -1,5 +1,10 @@
 # For the Dev
 DEVLOG/
+*.lnk
+*.zip
+
+
+
 
 
 # Byte-compiled / optimized / DLL files

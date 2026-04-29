@@ -24,5 +24,5 @@ In high-concurrency, regulated environments like GridStream, "silent" failures o
 ## Consequences
 *   **Positive:** Ensures 100% log capture in AWS CloudWatch, enabling proactive alerting on grid anomalies.
 *   **Positive:** Transforms technical debt from "hidden comments" into "explicit failure points," preventing accidental execution of unfinished logic.
-*   **Positive:** Simplifies the LLM's contribution by forcing it to provide either a working implementation or a clear, documented boundary.
+*   **Positive:** Simplifies an LLM's contribution by forcing it to provide either a working implementation or a clear, documented boundary.
 *   **Negative:** Requires slightly more boilerplate code for initial implementation.

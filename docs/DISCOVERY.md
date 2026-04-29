@@ -1,77 +1,116 @@
-# Project GridStream: Unified Energy Ingestion Platform
-**Simulation Scenario for GridCorp (Uplight-Style Integration)**
+# Project GridStream: A Paved-Road Reference Implementation
+**Simulation Scenario for GridCorp — Post-Acquisition Multi-Team Integration**
 
 ## 1. Project Context
-Following the acquisition of multiple utility-tech entities, GridCorp requires a standardized, scalable ingestion platform. This project demonstrates a Staff-level approach to integrating high-frequency SCADA data (Industrial) and low-latency IoT telemetry (Consumer) into a unified, observable pipeline.
+The Senior Director of Engineering inherited five Flex teams in North America, six in Pune, and a "big bang" deployment culture from a recently dissolved monolithic VP organization. Teams "deploy how they want to meet customer needs." Enginering teams cannot answer:
 
-### Core Objectives
-*   **Standardization:** Enforce data contracts across globally distributed teams using Avro and Schema Registry.
-*   **Reliability:** Implement resilient Kubernetes patterns (HPA, Probes, DLQs).
-*   **Observability:** Standardize cross-team visibility using OpenTelemetry and Prometheus.
-*   **DevOps Excellence:** Move from manual deployments to a "GitOps-ready" Helm-based workflow.
+1. *Do you deploy the way clients want you to?*
+2. *Can you deploy faster?*
+
+The 2026/2027 mandate is to migrate at least 5 teams onto a defensible, automated, observable continuous-integration pattern — without halting feature work to get there.
+
+This project is a **reference implementation of the paved road** that platform team would roll out. It includes:
+
+- The paved road itself (shared Helm chart, reusable CI workflow, change-control templates).
+- A reference service that *uses* the paved road (energy data ingestion — chosen because it stresses every standardization axis: distributed teams, schema evolution, regulated reliability, bursty load).
+- The migration narrative (incremental adoption path, per-team opt-in, ADR-recorded decisions).
+
+**The reference service is a seed example. The value of *this* project is the paved road pattern.**
 
 ---
 
-## 2. Architecture Overview
-The system consists of a Python-based **Synthetic Producer**, a **Kafka Backbone** for message orchestration, and a **Containerized Consumer** managed by Kubernetes.
+## 2. Core Objectives
 
+- **Standardization:** A shared Helm chart and reusable CI workflow that other teams adopt by reference, not copy-paste.
+- **Reliability:** Resilient Kubernetes patterns (probes, lag-based HPA, DLQ) baked into the paved-road defaults.
+- **Observability:** OpenTelemetry as the universal instrumentation standard, exported to Prometheus/Grafana with vendor-neutral semantics.
+- **GitOps Readiness:** Incremental migration from manual deploys (Makefile) → CI-automated deploys (GitHub Actions) → pull-based GitOps (ArgoCD).
+- **Defensible Adoption:** Every standard is documented in an ADR with a migration path that respects existing team velocity.
 
+---
+
+## 3. Architecture Overview
+
+The system has two layers, built in that order:
+
+### Platform Layer (Sprint 1 — the paved road)
+- A parameterized Helm chart (`charts/standard-service/`) that any team's service can use as its deployment artifact.
+- A reusable GitHub Actions workflow (`.github/workflows/standard-python-service.yml`) callable from any Python service repo via `uses:`.
+- Pre-commit configuration, Makefile entry points, change-control templates.
+- A trivial service stub that exists only to prove the chart and workflow function end-to-end.
+
+### Reference Service Layer (Sprint 2 — exercises the paved road)
+- Pydantic-validated synthetic producer reading energy CSV (NREL/Pecan Street).
+- Confluent Schema Registry with Avro contracts.
+- `confluent-kafka` consumer with DLQ routing and idempotency.
+- Wet-bulb / fail-open safety interlock per ADR-003.
+
+The reference service deploys via the platform layer's artifacts. No bespoke deployment logic. If the chart needs a special case for the reference service, that's a design failure of the chart — not a feature of the service.
 
 ### Technical Stack
-*   **Language:** Python 3.11+ (Pydantic, `confluent-kafka`, `uv`)
-*   **Stream:** Kafka, Confluent Schema Registry (Avro)
-*   **Orchestration:** Kubernetes (Local: Kind/Minikube)
-*   **Automation:** Helm, Makefile, GitHub Actions (simulated)
-*   **Observability:** OpenTelemetry (OTel), Prometheus, Grafana
+- **Language:** Python 3.11+ (Pydantic v2, `confluent-kafka`, `uv`, `mypy`, `ruff`)
+- **Stream:** Kafka, Confluent Schema Registry (Avro)
+- **Orchestration:** Kubernetes (local: Kind / Minikube; AWS EKS deferred to Sprint 5)
+- **Automation:** Helm, Makefile, GitHub Actions reusable workflows
+- **Continuous Delivery:** ArgoCD (Sprint 3)
+- **Observability:** OpenTelemetry, Prometheus, Grafana
+- **IaC:** Terraform / OpenTofu (Sprint 5)
 
 ---
 
-## 3. Implementation Roadmap (20-Hour Sprint)
+## 4. Sprint Roadmap
 
-### Phase 1: The Data Contract (Hours 1-5)
-*   **Task 1.1:** Design an Avro schema (`power_reading.avsc`) that balances SCADA requirements (timestamp, voltage, frequency) with IoT requirements (device_id, firmware_version).
-*   **Task 1.2:** Build a Python "Producer" using **Pydantic** to validate local CSV data (from NREL/Pecan Street) before serializing it to Avro.
-*   **Staff Focus:** Implement a **Circuit Breaker** pattern—if Kafka is unreachable, the producer should buffer or fail gracefully rather than crashing.
+See [`remaining_sprints.md`](./remaining_sprints.md) for the per-sprint task breakdown, prerequisites, and Definition of Done.
 
-### Phase 2: The Stream Backbone (Hours 6-10)
-*   **Task 2.1:** Deploy a local Kafka + Schema Registry stack using Docker Compose.
-*   **Task 2.2:** Implement a **Dead Letter Queue (DLQ)**. Messages that fail schema validation or business logic processing are routed to a `GridStream.failed` topic.
-*   **Staff Focus:** Schema Evolution. Perform a "Live Upgrade" where you add a field to the schema and ensure the consumer doesn't break (Backward Compatibility).
+| Sprint | Focus | Coherent Cut-off Artifact |
+|---|---|---|
+| 1 | Paved Road | Shared chart + reusable workflow + service stub |
+| 2 | Reference Service | Producer/consumer deployed via Sprint 1 chart |
+| 3 | GitOps + Observability | ArgoCD + OTel + Grafana + lag-based HPA |
+| 4 | Migration Narrative | Adoption playbook + scaffold-a-service script |
+| 5 (deferred) | AWS Deployment | Terraform/EKS/MSK |
 
-### Phase 3: The Platform & GitOps (Hours 11-16)
-*   **Task 3.1:** Containerize the Consumer. Create a multi-stage Dockerfile optimized for size and security.
-*   **Task 3.2:** Develop a **Helm Chart** for the consumer. Parameterize resource limits, environment variables, and replicas.
-*   **Task 3.3:** Configure **Liveness and Readiness Probes** that actually check Kafka connectivity.
-*   **Staff Focus:** Horizontal Pod Autoscaling (HPA). Configure the consumer to scale up based on **Kafka Consumer Lag** rather than just CPU usage.
-
-### Phase 4: Observability & Standardization (Hours 17-20)
-*   **Task 4.1:** Instrument the Python consumer with **OpenTelemetry**. Capture traces for every message processed and export metrics to Prometheus.
-*   **Task 4.2:** Build a "Standardized Service Dashboard" in Grafana showing the **Golden Signals**: Latency, Traffic, Errors, and Saturation.
-*   **Staff Focus:** Define an **SLO (Service Level Objective)** for ingestion latency (e.g., 99% of messages processed in < 500ms) and create an alert for it.
+Each sprint is scoped to a single development session (~5 hours) and produces a coherent artifact. Stopping after any sprint leaves a defensible reference deliverable.
 
 ---
 
-## 4. Defensible Design Decisions (Interview Talking Points)
+## 5. Defensible Design Decisions
 
 | Decision | Staff-Level Reasoning |
-| :--- | :--- |
-| **Avro over JSON** | Reduces payload size for massive IoT volumes and enforces strict data contracts between Polish and US engineering teams. |
-| **Helm Templates** | Provides a "paved road" for other teams. Instead of writing YAML, they just provide a `values.yaml` to the GridCorp standard chart. |
-| **Consumer Lag HPA** | In energy grids, data freshness is critical. Scaling by CPU is a "lagging indicator"; scaling by lag is a "leading indicator" of grid state visibility. |
-| **OpenTelemetry** | Ensures vendor neutrality. If GridCorp moves from Datadog to New Relic, the application code never has to change. |
+|---|---|
+| **Build custom paved road, not adopt Backstage** | The IDP pattern is recognized but no off-the-shelf framework integrates the components for this organizational context. Components are off-the-shelf; the opinions and migration path are custom. (ADR-008) |
+| **Paved road first, service second** | The role's mandate is multi-team adoption, not building one more service. The platform artifact has to exist before the reference service can be presented as "an example of." |
+| **Reusable GHA workflow, not copy-paste** | Teams that copy CI configs drift in 3 months. Teams that `uses:` a shared workflow inherit security and quality updates automatically. |
+| **Helm chart parameterized, not forked** | Same principle. A `values.yaml` is a contract; a forked chart is technical debt. |
+| **Avro over JSON** | Compact binary; enforced backward compatibility; cross-team contract enforcement. |
+| **Lag-based HPA over CPU** | I/O-bound services have low CPU and high backpressure. Lag is the leading indicator; CPU is reactive. |
+| **OpenTelemetry as standard** | Vendor neutrality. The cost of switching observability backends becomes a config change, not a code rewrite. |
+| **Incremental GitOps adoption** | Big-bang migrations halt feature work. Per-step opt-in (Makefile → CI → ArgoCD) earns trust without trading velocity. |
+| **AWS deferred to Sprint 5** | Local Kind exercises every architectural argument. AWS adds 6+ hours of plumbing without changing the technical story. Real cloud deploy is reference enrichment, deliberately scheduled outside the project's primary sprint window. |
+| **Fail-open safety interlocks** | In a regulated SCADA context, "no data" is more dangerous than "bad data." The platform defaults to the safest physical state when telemetry is uncertain. |
 
 ---
 
-## 5. Repository Structure
-```text
+## 6. Repository Structure
+
+```
 .
-├── .github/workflows/   # CI/CD Standardized Templates
-├── charts/              # Helm Chart for GridStream Consumer
-├── data/                # Sample Energy CSVs (Pecan Street/NREL)
-├── scripts/             # Makefile for dev-flow automation
+├── .github/workflows/       # Reusable CI templates (Sprint 1)
+├── charts/                  # Paved-road Helm chart (Sprint 1)
+├── data/                    # Sample energy CSVs
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── CONTEXT.md
+│   ├── CONTRIBUTING.md
+│   ├── DISCOVERY.md
+│   ├── adr/
+│   └── remaining_sprints.md
+├── infra/
+│   └── terraform/           # AWS modules (Sprint 5, stubbed)
+├── schemas/                 # Avro contracts (Sprint 2)
+├── scripts/                 # scaffold-a-service, etc. (Sprint 4)
 ├── src/
-│   ├── producer/        # Validation & Ingestion logic
-│   └── consumer/        # Processing & OTel Instrumentation
-├── schemas/             # Avro/Pydantic contract definitions
-├── ARCHITECTURE.md      # Detailed system design
-└── README.md            # Quickstart guide
+│   ├── producer/            # (Sprint 2)
+│   └── consumer/            # (Sprint 2)
+└── Makefile
+```

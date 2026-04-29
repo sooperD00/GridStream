@@ -18,7 +18,7 @@ How should the platform evolve to support this? Include any required **Schema Ch
 - [ ] New SLOs/Metrics required
 
 ## 🌍 Stakeholders
-Which teams are affected by this? (e.g., AutoGrid, Kraken, Data Science)
+Which teams are affected by this? (e.g., Flex platform team, customer-facing team, Data Science, Grid Operations, Utility Partner Integrations)
 
 ## ✅ Success Criteria
-How do we know this is successful? (e.g., "Reduces ingestion latency for Danish substation data by 200ms.")
+How do we know this is successful? (e.g., "Reduces ingestion latency for Denmark substation data by 200ms.")
