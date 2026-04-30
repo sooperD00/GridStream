@@ -63,3 +63,16 @@ repos:
           - ci
           - revert
           - plan
+
+  - repo: local
+    hooks:
+      - id: cleanup-marker-format
+        name: "[SPRINT-N-CLEANUP] markers must match canonical form"
+        entry: '\[SPRINT-(?!\d+-CLEANUP\])'
+        language: pygrep
+        types: [text]
+        # Self-exclusion: this file documents the canonical marker form in prose
+        # (e.g. the hook's own name uses [SPRINT-N-CLEANUP] as a meta-variable),
+        # which would otherwise trip the regex. The rule applies to code, not to
+        # the rule's own definition.
+        exclude: ^\.pre-commit-config\.yaml$
