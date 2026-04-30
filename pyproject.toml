@@ -1,0 +1,68 @@
+# GridStream — workspace root.
+#
+# This is a virtual uv workspace per ADR-0010 — the root is a coordinator,
+# not a package. An adopting team's repo is one workspace member's worth
+# of files (a single pyproject.toml under packages/<their-service>/), not
+# this whole tree. See docs/paved-road.md §"This repo's layout vs. yours".
+
+[tool.uv.workspace]
+members = ["packages/standard-service-stub"]
+# [SPRINT-2-CLEANUP] add producer, consumer, models per ADR-0010
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "pre-commit",
+    "httpx",  # FastAPI's TestClient sits on httpx; needed for tests.
+]
+
+# ─── Tool config (workspace-wide) ────────────────────────────────────────────
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    # [SPRINT-2-CLEANUP] Remove these entries when the producer/consumer/
+    # models packages land with real source (per ADR-0010). Until then,
+    # Ruff would error on the empty placeholder dirs.
+    "packages/producer",
+    "packages/consumer",
+    "packages/models",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "UP",   # pyupgrade
+    "SIM",  # simplify
+    "S",    # bandit (security)
+]
+ignore = [
+    "E501",  # line length is the formatter's job
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101"]  # `assert` is the whole point of a test
+
+[tool.mypy]
+python_version = "3.11"  # mypy target-version
+strict = true
+warn_unused_ignores = true
+warn_return_any = true
+# Each member's src/ is type-checked from CI; this config applies to all.
+
+[tool.pytest.ini_options]
+# [SPRINT-2-CLEANUP] Add producer/consumer/models test paths when those
+# members land. Stub is the only member with code today, so this list
+# can grow to a single workspace-root glob ("packages/*/tests") once
+# every member has tests — but until then, an explicit list keeps
+# pytest from walking empty placeholder dirs.
+testpaths = ["packages/standard-service-stub/tests"]
+addopts = ["--strict-markers", "-ra"]

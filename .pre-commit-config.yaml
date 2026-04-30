@@ -1,0 +1,65 @@
+# Pre-commit hooks per ADR-005 (shift-left quality gates).
+# Install with `make setup` (runs `uv run pre-commit install`).
+# Run on demand with `uv run pre-commit run --all-files`.
+# rev pins good; dependency pins bad (let uv decide and then commit uv.lock)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        # Helm templates contain Go templating that pyyaml can't parse.
+        exclude: ^charts/.*/templates/.*\.yaml$
+      - id: check-toml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        # [SPRINT-2-CLEANUP] Widen to ^packages/[^/]+/(src|tests)/ when
+        # producer/consumer/models land. Likely Pattern: every member
+        # gets src + tests checked under strict mode.
+        files: ^packages/standard-service-stub/(src|tests)/
+        # [SPRINT-2-CLEANUP] additional_dependencies grows as members
+        # arrive — confluent-kafka stubs for the consumer, avro libs
+        # for the producer. mypy needs runtime types to check imports
+        # across package boundaries.
+        additional_dependencies:
+          - pydantic
+          - fastapi
+          - pytest        # for the typed pytest API in tests
+          - httpx         # TestClient sits on httpx
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args:
+          # Allowed types. Matches current commit plan plus the standard set.
+          # Keep this list tight —
+          # the value of conventional commits is a small vocabulary
+          # everyone recognizes, not a free-for-all of "type" tokens.
+          - feat
+          - fix
+          - chore
+          - docs
+          - test
+          - refactor
+          - perf
+          - build
+          - ci
+          - revert
+          - plan
