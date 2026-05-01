@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1.7
+#
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║                       NOT FOR PRODUCTION                                 ║
+# ║                                                                          ║
+# ║  This image uses python:3.11-slim-bookworm (full glibc, shell, apt) so   ║
+# ║  developers can `kubectl exec` into a running container while iterating  ║
+# ║  locally. It carries meaningful attack surface — shell, package          ║
+# ║  manager, coreutils — that the production image (Dockerfile, distroless) ║
+# ║  deliberately does not.                                                  ║
+# ║                                                                          ║
+# ║  Excluded from `make build`. Use `make build-dev` to construct.          ║
+# ║  See ADR-0009 for the rationale.                                         ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+FROM python:3.11-slim-bookworm
+
+COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /usr/local/bin/
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never \
+    PYTHONUNBUFFERED=1 \
+    PORT=8000
+
+WORKDIR /workspace
+
+COPY pyproject.toml uv.lock ./
+COPY packages/standard-service-stub/pyproject.toml packages/standard-service-stub/
+
+# deps
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --package gridstream-standard-service-stub --frozen --no-install-project
+
+# src
+COPY packages/standard-service-stub/src packages/standard-service-stub/src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --package gridstream-standard-service-stub --frozen
+
+ENV PATH="/workspace/.venv/bin:$PATH"
+
+EXPOSE 8000
+
+# CMD (not ENTRYPOINT) so `docker run image-dev <anything>` overrides — handy
+# for `docker run … bash` to poke around. Prod uses ENTRYPOINT for the opposite
+# reason (lock down what runs). See Dockerfile / ADR-0009.
+CMD ["python", "-m", "standard_service_stub"]
