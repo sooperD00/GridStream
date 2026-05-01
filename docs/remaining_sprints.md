@@ -128,6 +128,18 @@ This sprint engages directly with:
 ### Cut-off Value
 Stopping here yields the paved road plus a working reference service — a complete reference service built on its own platform's standards, demonstrating schema evolution, DLQ handling, and safety-critical defaults.
 
+### Housekeeping
+- [ ] number of tests are going to ~quintuple here. Use this pattern and patterns like it (individual TestClients in sprint 1 tests were good for a learning pattern across 4 tests, but we should be more efficient in sprint 2)
+	```
+	@pytest.fixture
+	def client():
+	    with TestClient(app) as c:
+	        yield c
+
+	def test_healthz_returns_200_with_alive_status(client) -> None:
+	    response = client.get("/healthz")
+	    # ...
+	```
 ---
 
 ## 🟠 Sprint 3: GitOps + Observability
@@ -187,6 +199,9 @@ This sprint engages directly with:
 ### Cut-off Value
 Stopping here yields the full technical narrative — paved road, reference service, plus the observability and GitOps tooling that makes the platform self-service for application teams. Covers the concepts that complete a credible platform-engineering story: pull-based GitOps as deployment model, OpenTelemetry as the instrumentation standard, observability-driven autoscaling via the chart, and SLO-based reliability investment.
 
+### Housekeeping
+- [ ] Install an admission-policy engine (Kyverno or OPA Gatekeeper — pick during sprint) and ship a baseline policy that rejects pods without `runAsNonRoot: true`, `readOnlyRootFilesystem: true`, and `capabilities.drop` containing `ALL`. Server-side defense-in-depth complementing ADR-0011's `values.schema.json`: the schema catches misconfiguration at `helm install`; admission policy catches anything that bypasses the chart. Pairs with the Sprint 3 observability stack — policy violations should surface in Grafana alongside the golden-signals dashboards.
+
 ---
 
 ## 🔴 Sprint 4: Migration Narrative + Polish
@@ -234,7 +249,17 @@ This sprint engages directly with:
 ### Cut-off Value
 Stopping here yields the complete platform story. The migration narrative is what differentiates "a thing was built" from "an organization adopted a thing." The technical artifact alone doesn't bridge that gap; the playbook and scaffolding tooling do.
 
+### Housekeeping
+- [ ] Decide in Sprint 4 whether clock skew defensive coding belongs in the ADR record or just in the playbook. Could be something like: "ADR-0011: Server-stamped timestamps for cross-service writes" would record: the problem (clock skew), the decision (always server-stamp on the receiver), the consequences (slightly more code, no clock-drift bugs), references to ADRs 0001 and 0003.
+- [ ] Scaffold template includes:
+  - src/<package>/py.typed (PEP 561 marker)
+  - src/<package>/__init__.py with __version__
+  - src/<package>/__main__.py for python -m invocation
+  - tests/__init__.py + tests/test_<package>.py smoke tests
+  - pyproject.toml shaped after standard-service-stub
+  - py.typed marker registered in [tool.hatch.build.targets.wheel]
 ---
+- [ ] Add a recommendation to the Sprint 4 adoption playbook that adopting teams configure CODEOWNERS on their `values-*.yaml` files, requiring platform-team review for any change that touches `podSecurityContext` or `containerSecurityContext`. Social enforcement complementing the schema (ADR-0011); puts a human in the loop on the override path the schema can't pin without breaking legitimate use cases.
 
 ## ⚪ Sprint 5: AWS Deployment (Deferred / Stretch)
 

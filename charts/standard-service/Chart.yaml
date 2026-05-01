@@ -1,0 +1,17 @@
+apiVersion: v2
+name: standard-service
+description: |
+  GridStream paved-road chart. Standardized parameterized deployment for
+  Python services adopting the platform's defaults. See ../README.md for
+  the values contract.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - gridstream
+  - paved-road
+  - python
+  - fastapi
+maintainers:
+  - name: GridStream Platform Team
+home: https://github.com/sooperD00/gridstream

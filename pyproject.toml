@@ -17,6 +17,7 @@ dev = [
     "pytest-cov",
     "pre-commit",
     "httpx",  # FastAPI's TestClient sits on httpx; needed for tests.
+    "jsonschema>=4.20",  # ADR-0011 schema enforcement smoke test (scripts/check-chart-schema.sh)
 ]
 
 # ─── Tool config (workspace-wide) ────────────────────────────────────────────

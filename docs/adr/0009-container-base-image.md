@@ -82,3 +82,4 @@ A companion `Dockerfile.dev` (using `python:3.11-slim-bookworm`) is provided for
 - Sprint 3 plan — OpenTelemetry instrumentation, Prometheus + Grafana, lag-based HPA
 - Sprint 4 plan — Adoption playbook sequencing for non-DevOps teams
 - [GoogleContainerTools/distroless](https://github.com/GoogleContainerTools/distroless)
+- Note on `gcr.io`: the Container Registry *product* was shut down March 2025; the `gcr.io` *hostname* is now served by Artifact Registry and remains the canonical pull location for distroless images per the project's README.

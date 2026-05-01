@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sooperD00/GridStream/charts/standard-service/values.schema.json",
+  "title": "GridStream standard-service chart values",
+  "description": "Machine-checkable contract for the paved-road chart. The README describes the four tiers (MUST override / SHOULD configure / SHOULD NOT override / MUST NOT touch). This file enforces them. If the README and the schema disagree, the schema wins.",
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["app", "image", "deployment", "service", "probes", "resources", "podSecurityContext", "containerSecurityContext"],
+
+  "properties": {
+
+    "nameOverride":     { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "description": "MUST override. Logical service name; used as container name and identification surface.",
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        }
+      }
+    },
+
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository"],
+      "properties": {
+        "repository": {
+          "description": "MUST override. OCI image reference (no tag).",
+          "type": "string",
+          "minLength": 1
+        },
+        "tag":        { "type": "string", "minLength": 1 },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "replicas":        { "type": "integer", "minimum": 0 },
+        "extraContainers": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type":       { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
+        "port":       { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "targetPort": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+
+    "probes": {
+      "description": "SHOULD NOT override the .path fields — paved-road convention is /healthz and /readyz. The schema pins these via const; tuning fields stay free.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["liveness", "readiness"],
+      "properties": {
+        "liveness":  { "$ref": "#/$defs/probe", "properties": { "path": { "const": "/healthz" } } },
+        "readiness": { "$ref": "#/$defs/probe", "properties": { "path": { "const": "/readyz"  } } }
+      }
+    },
+
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests", "limits"],
+      "properties": {
+        "requests": { "$ref": "#/$defs/resourceQuantities" },
+        "limits":   { "$ref": "#/$defs/resourceQuantities" }
+      }
+    },
+
+    "config": {
+      "description": "Non-secret env vars. Becomes a ConfigMap and is mounted via envFrom. For secretKeyRef / fieldRef use `env` instead.",
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+
+    "env": {
+      "description": "Standard Kubernetes env entries — for secretKeyRef, fieldRef, etc. For flat strings use `config` instead.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    },
+
+    "podSecurityContext": {
+      "description": "SHOULD NOT override. Matches distroless production image (ADR-0009). runAsNonRoot is pinned; UIDs default to 65532 (distroless `nonroot`) but adopters may shift them if their image expects different IDs.",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["runAsNonRoot", "seccompProfile"],
+      "properties": {
+        "runAsNonRoot":   { "const": true },
+        "runAsUser":      { "type": "integer", "minimum": 1 },
+        "runAsGroup":     { "type": "integer", "minimum": 1 },
+        "fsGroup":        { "type": "integer", "minimum": 1 },
+        "seccompProfile": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": { "enum": ["RuntimeDefault", "Localhost"] }
+          }
+        }
+      }
+    },
+
+    "containerSecurityContext": {
+      "description": "SHOULD NOT override. Matches distroless production image (ADR-0009).",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["allowPrivilegeEscalation", "readOnlyRootFilesystem", "capabilities"],
+      "properties": {
+        "allowPrivilegeEscalation": { "const": false },
+        "readOnlyRootFilesystem":   { "const": true },
+        "capabilities": {
+          "type": "object",
+          "required": ["drop"],
+          "properties": {
+            "drop": {
+              "type": "array",
+              "contains": { "const": "ALL" }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "initialDelaySeconds", "periodSeconds", "timeoutSeconds", "failureThreshold"],
+      "properties": {
+        "path":                { "type": "string", "pattern": "^/" },
+        "initialDelaySeconds": { "type": "integer", "minimum": 0 },
+        "periodSeconds":       { "type": "integer", "minimum": 1 },
+        "timeoutSeconds":      { "type": "integer", "minimum": 1 },
+        "failureThreshold":    { "type": "integer", "minimum": 1 }
+      }
+    },
+    "resourceQuantities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu", "memory"],
+      "properties": {
+        "cpu":    { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?(m|)$" },
+        "memory": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)?(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|K)?$" }
+      }
+    }
+  }
+}

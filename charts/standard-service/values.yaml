@@ -1,0 +1,129 @@
+# GridStream paved-road values.yaml
+#
+# This file is the contract. Adopting teams override these values per
+# service via `-f values-myservice.yaml` or `--set` flags. The chart
+# itself stays unforked. See charts/standard-service/README.md for the
+# "must override / should configure / do not touch" breakdown.
+
+# ─── Identity ───────────────────────────────────────────────────────────────
+
+# Override the chart name used in resource names. Leave empty to default
+# to the chart's own name.
+nameOverride: ""
+
+# Fully override the generated resource name. Leave empty to default to
+# "<release>-<chart>" via the helper.
+fullnameOverride: ""
+
+app:
+  # Logical service name. Used as the container name and for any caller-
+  # facing identification. REQUIRED for adopters to set explicitly so
+  # logs and dashboards aren't ambiguous when multiple services share
+  # the chart.
+  name: ""
+
+# ─── Image ──────────────────────────────────────────────────────────────────
+
+image:
+  # OCI image reference. REQUIRED.
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# ─── Deployment ─────────────────────────────────────────────────────────────
+
+deployment:
+  replicas: 1
+
+  # Optional sidecars — full container specs, default empty.
+  # Sprint 3 will inject an OTel collector here; teams may add their own.
+  # Example:
+  #   extraContainers:
+  #     - name: otel-collector
+  #       image: otel/opentelemetry-collector:0.95.0
+  #       ports: [{ containerPort: 4317, name: otlp }]
+  extraContainers: []
+
+# ─── Service ────────────────────────────────────────────────────────────────
+
+service:
+  type: ClusterIP
+  port: 80
+  # Container port the application listens on. Must match the app.
+  targetPort: 8000
+
+# ─── Probes ─────────────────────────────────────────────────────────────────
+# Defaults match the GridStream convention: /healthz for liveness,
+# /readyz for readiness. Adopters override only when a service genuinely
+# can't expose these paths — and that itself should be flagged at review.
+
+probes:
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+# ─── Resources ──────────────────────────────────────────────────────────────
+# ⚠️  STUB-SHAPED. These will fail an HPA or any real workload — they exist
+# to make `make deploy-local` boot a pod, not to run anything. Production
+# services MUST override both blocks per their measured behavior. VPA
+# recommendations are a reasonable starting point.
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# ─── Configuration ──────────────────────────────────────────────────────────
+
+# Non-secret env vars (flat strings only). Each key/value becomes a
+# ConfigMap entry, mounted on the container via envFrom. The deployment
+# hashes this map and rolls pods automatically on change.
+# Use this for: LOG_LEVEL, KAFKA_BROKERS, feature flags.
+# Do NOT use this for secrets or downward-API refs — see `env:` below.
+config: {}
+  # Example:
+  # LOG_LEVEL: "INFO"
+  # KAFKA_BROKERS: "kafka.gridstream.svc:9092"
+
+# Structured env vars — full Kubernetes env-entry shape, used when a flat
+# string isn't enough.
+# Use this for: secretKeyRef (pulling from a Secret), fieldRef (pod metadata
+# via downward API), configMapKeyRef (single key from a different ConfigMap).
+# For flat strings, use `config:` above instead.
+env: []
+  # Example:
+  # - name: API_TOKEN
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: token
+
+# ─── Security context ───────────────────────────────────────────────────────
+# Defaults match the distroless production image (ADR-0009).
+# Override only with explicit justification.
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532   # distroless `nonroot` UID
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
