@@ -66,3 +66,14 @@ warn_return_any = true
 # pytest from walking empty placeholder dirs.
 testpaths = ["packages/standard-service-stub/tests"]
 addopts = ["--strict-markers", "-ra"]
+
+[tool.ruff.lint.isort]
+# Tells Ruff which packages are first-party (ours) so import sorting
+# groups them separately from third-party deps. Without this, Ruff
+# treats workspace members as third-party and collapses the blank-line
+# separator between groups.
+known-first-party = [
+    "standard_service_stub",
+    # [SPRINT-2-CLEANUP] Add producer, consumer, models when those
+    # members land with real source.
+]
