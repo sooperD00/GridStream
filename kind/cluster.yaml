@@ -1,0 +1,18 @@
+# Local Kind cluster for GridStream development.
+#
+# Single control-plane node is sufficient for Sprint 1 — we deploy the
+# stub via helm and reach it with `kubectl port-forward`. Sprint 3 adds
+# ingress + port mappings when Grafana/ArgoCD UIs need exposure.
+#
+# [SPRINT-3-CLEANUP] Add extraPortMappings here when Grafana/ArgoCD UIs
+# need to be reachable from the host.
+#
+# Notes:
+#   - v1alpha4 is kind's stable config version, despite the alpha tag.
+#   - Cluster name is set by the Makefile (`CLUSTER ?= gridstream`), not
+#     here — kind's CLI flag wins over a `name:` field in this file.
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
