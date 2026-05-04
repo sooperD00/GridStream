@@ -14,13 +14,12 @@
 # for an end-to-end example.
 #
 # name → on → concurrency → permissions → env → jobs
-
-
-# [SPRINT-1-CLEANUP]: third-party actions below are tag-pinned (e.g.
-# astral-sh/setup-uv@v3). Next commit replaces these with full-SHA
-# pins managed by Dependabot — see ADR-0012. Tag pins are a known
-# supply-chain risk surface (mutable refs); not blocking the dummy-PR
-# DoD for this commit, but must land before tagging @v1.
+#
+# Third-party action references below are SHA-pinned with trailing
+# version comments, managed by Dependabot. Tags are mutable; SHAs are
+# immutable. A SHA like caf0cab7... is a fingerprint of the code itself,
+# not a name pointing at it — swapping the code changes the fingerprint.
+# See ADR-0012.
 
 name: Standard Python Service (Reusable)
 
@@ -85,10 +84,10 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3.2.4
         with:
           enable-cache: true
 
@@ -128,13 +127,13 @@ jobs:
     needs: quality-gates
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435  # v3.11.1
 
       - name: Build container image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25  # v5.4.0
         with:
           # Sentinel pattern: GHA expressions don't have a clean "input was
           # omitted" check, so we use the literal string "auto" as a sentinel

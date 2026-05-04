@@ -1,0 +1,30 @@
+# Dependabot configuration.
+#
+# Per ADR-0012, third-party GitHub Actions in this repo are SHA-pinned.
+# Dependabot reads the trailing `# vX.Y.Z` comment on each pin, checks
+# upstream weekly, and opens PRs that bump the SHA and the comment
+# together. Reviewers approve or reject each update with release notes
+# visible in the PR diff — same review experience as tag-based pinning,
+# stronger security posture (immutable refs).
+#
+# python-deps via uv are not Dependabot-managed (yet); uv has its own
+# update mechanism and uv.lock is the source of truth there. Revisit
+# if Dependabot ships uv-aware support.
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      # PRs land Monday morning; reviewing during the week; merge before next batch
+      interval: weekly
+      day: monday
+    # generous for 4 actions
+    open-pull-requests-limit: 5
+    commit-message:
+      # commit convention: "chore(github-actions):"
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
