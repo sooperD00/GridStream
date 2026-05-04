@@ -1,0 +1,52 @@
+# GridStream platform-repo CI.
+#
+# This workflow is twofold: (a) it satisfies Sprint 1's Definition of
+# Done — "the reusable workflow file is callable; CI is green on a dummy
+# PR" — by actually invoking the reusable workflow against the stub;
+# (b) it serves as the canonical example a future adopter can copy
+# verbatim into their repo, with the workspace-shape inputs stripped.
+#
+# The minimal adopter caller is a five-line `uses:` block — see
+# docs/paved-road.md §"Calling the workflow from your repo".
+#
+# name → on → concurrency → permissions → env → jobs
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per ref for performance. PRs cancel in-progress runs (only the
+# latest push matters for review); main does not (every commit on main is a
+# candidate release artifact and deserves its own CI record, especially
+# once Sprint 4's registry push tags images by commit SHA).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# Least privilege: GITHUB_TOKEN gets read-only repo access by default.
+# [SPRINT-4-CLEANUP] Sprint 4 will add `packages: write` at the build-job
+# level when registry push lands, leaving quality-gates read-only even when
+# build can publish. Job-level perms replace workflow-level (don't
+# merge), so the build job will declare both scopes when the time comes.
+permissions:
+  contents: read
+
+jobs:
+  standard-service-stub:
+    name: standard-service-stub (paved road)
+    uses: ./.github/workflows/standard-python-service.yml
+    # Local-path uses: (no @ref) — GHA evaluates against the commit
+    # being built, so a PR that modifies standard-python-service.yml
+    # tests its OWN changes, not @v1's. Cross-repo callers (adopters)
+    # pin @v1; self-callers must not, by design. This is the mechanism
+    # that makes GridStream dogfood its own paved road.
+    with:
+      working-directory: packages/standard-service-stub
+      # Workspace-aware build: Dockerfile lives in the member directory
+      # but build context is the workspace root so uv.lock is reachable.
+      dockerfile-context: .
+      dockerfile-path: packages/standard-service-stub/Dockerfile
+      image-name: gridstream-standard-service-stub

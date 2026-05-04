@@ -13,7 +13,9 @@ Welcome. This project prioritizes system stability, schema integrity, and observ
 
 ## 🛠 Quality Standards
 *   **Testing:** We aim for 80%+ coverage. Run `make test` before pushing.
+> note: The 80% floor is calibrated as "high enough to catch most regressions, low enough that contributors aren't gaming coverage by writing tests against trivial getters" and is a backstop, not a target. Coverage measures *exercised* code, not *correct* code — a 95% covered codebase with shallow tests is worse than an 80% covered codebase with tests that assert behavior. Aim for the latter. Calibration is in the range Google's testing team describes as "acceptable" (60%) to "commendable" (75%); we picked the upper end of that band as our standard. See [References](#references) below.
 *   **Linting:** We enforce `ruff` and `mypy` for type safety.
+*   **Lockfile hygiene:** CI runs `uv sync --frozen` and will fail if `uv.lock` is stale relative to `pyproject.toml`. If you edit dependencies, run `uv sync` locally and commit the regenerated `uv.lock` alongside your `pyproject.toml` change. CI's error message (`The lockfile at uv.lock needs to be updated...`) means exactly this — not a CI bug.
 *   **Documentation:** Updates to core logic must be reflected in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## 🏗 Schema Changes
@@ -21,3 +23,12 @@ If you are modifying a `.avsc` file:
 1. Ensure the change is **backward compatible**.
 2. Run the compatibility checker: `make schema-check`.
 3. Notify the #platform-standards Slack channel.
+
+---
+
+## References
+
+- Arguelles, C., Ivanković, M., and Bender, A. ["Code Coverage Best
+  Practices."](https://testing.googleblog.com/2020/08/code-coverage-best-practices.html)
+  Google Testing Blog, August 7, 2020. — Source for the 60%/75%/90%
+  coverage guideline tiers and the "exercised vs. correct" framing.

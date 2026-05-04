@@ -57,7 +57,10 @@ python_version = "3.11"  # mypy target-version
 strict = true
 warn_unused_ignores = true
 warn_return_any = true
-# Each member's src/ is type-checked from CI; this config applies to all.
+# Workspace-root default for ad-hoc local runs (`mypy` from repo root).
+# CI runs mypy with working-directory at the member, so each member
+# declares its own [tool.mypy] — see packages/standard-service-stub/
+# pyproject.toml. New members must add their own block.
 
 [tool.pytest.ini_options]
 # [SPRINT-2-CLEANUP] Add producer/consumer/models test paths when those

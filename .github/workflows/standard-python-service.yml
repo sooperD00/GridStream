@@ -1,0 +1,162 @@
+# GridStream paved-road reusable CI workflow.
+#
+# Adopting teams call this from their own repo's CI. Adoption surface in
+# the simplest case (single-service repo, defaults across the board):
+#
+#   jobs:
+#     ci:
+#       uses: sooperD00/gridstream/.github/workflows/standard-python-service.yml@v1
+#       with:
+#         image-name: my-team-service
+#
+# See docs/paved-road.md §"Calling the workflow from your repo" for the
+# full adoption surface and the GridStream caller (.github/workflows/ci.yml)
+# for an end-to-end example.
+#
+# name → on → concurrency → permissions → env → jobs
+
+
+# [SPRINT-1-CLEANUP]: third-party actions below are tag-pinned (e.g.
+# astral-sh/setup-uv@v3). Next commit replaces these with full-SHA
+# pins managed by Dependabot — see ADR-0012. Tag pins are a known
+# supply-chain risk surface (mutable refs); not blocking the dummy-PR
+# DoD for this commit, but must land before tagging @v1.
+
+name: Standard Python Service (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.11"
+        description: "Python interpreter version."
+      coverage-threshold:
+        type: number
+        default: 80
+        description: "Minimum percent line coverage. Build fails below this."
+      image-name:
+        type: string
+        required: true
+        description: |
+          Image name without registry prefix or tag (e.g. "my-team-service",
+          not "ghcr.io/myorg/my-team-service:latest"). The build step
+          concatenates this with ":${{ github.sha }}" to produce the final
+          tag, so passing a registry-prefixed or tagged value yields an
+          invalid double-tag like "ghcr.io/foo:latest:abc123" that fails
+          at build time. Not currently enforced — see remaining_sprints.md
+          "Post-adoption" if this bites.
+      working-directory:
+        type: string
+        default: "."
+        description: |
+          Service root. Default '.' for adopters with single-repo-per-service.
+          GridStream's own CI passes 'packages/standard-service-stub' since
+          the platform repo is a uv workspace per ADR-0010.
+      dockerfile-context:
+        type: string
+        default: "auto"
+        description: |
+          Docker build context. Defaults to "auto" (use working-directory).
+          Override when the Dockerfile reaches outside its own directory
+          (the GridStream stub does — workspace-aware multi-stage build).
+          The literal string "auto" is a sentinel meaning "derive from
+          working-directory"; pass any other path to override.
+      dockerfile-path:
+        type: string
+        default: "Dockerfile"
+        description: "Dockerfile path relative to dockerfile-context."
+
+# concurrency intentionally omitted — caller decides cadence
+
+# Least privilege at the reusable workflow level: every adopter
+# inherits read-only by default. Adopters needing broader scopes
+# (e.g. registry push) declare them at job level in their caller,
+# which replaces — not merges with — these defaults.
+permissions:
+  contents: read
+
+jobs:
+  quality-gates:
+    name: Lint, Type-check, Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ inputs.python-version }}
+        run: uv python install ${{ inputs.python-version }}
+
+      - name: Install dependencies
+        # --frozen: refuse to proceed if uv.lock is stale relative to
+        # pyproject.toml. Lockfiles only do their job if CI refuses to run
+        # without them; without --frozen, uv silently regenerates the lock
+        # mid-CI and tests pass against deps that were never reviewed.
+        #
+        # uv finds the workspace root automatically and resolves all
+        # workspace members. For a non-workspace adopter, this is a plain
+        # `uv sync --frozen` against the single project.
+        run: uv sync --all-extras --dev --frozen
+
+      - name: Lint (ruff check)
+        run: uv run ruff check .
+
+      - name: Format check (ruff format --check)
+        run: uv run ruff format --check .
+
+      - name: Type check (mypy)
+        run: uv run mypy src tests
+
+      - name: Test with coverage gate
+        run: |
+          uv run pytest tests \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-fail-under=${{ inputs.coverage-threshold }}
+
+  build:
+    name: Build container
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v5
+        with:
+          # Sentinel pattern: GHA expressions don't have a clean "input was
+          # omitted" check, so we use the literal string "auto" as a sentinel
+          # meaning "derive from working-directory". The ternary works because
+          # GHA expressions short-circuit like JavaScript — the && / || chain
+          # returns the first truthy value, so a non-"auto" string returns
+          # itself; "auto" falls through to working-directory.
+          # FLAG IN REVIEW if the comparison logic looks wrong — sentinel
+          # checks are easy to invert.
+          context: ${{ inputs.dockerfile-context != 'auto' && inputs.dockerfile-context || inputs.working-directory }}
+          file: ${{ inputs.dockerfile-path }}
+          tags: ${{ inputs.image-name }}:${{ github.sha }}
+          push: false
+          # GHA cache backend: BuildKit reuses unchanged layers across CI
+          # runs via GitHub's built-in cache service. mode=max also caches
+          # intermediate build stages — necessary for the multi-stage
+          # distroless build per ADR-0009, where the builder stage is
+          # the expensive part and the final stage is just a COPY.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # [SPRINT-4-CLEANUP]: wire registry push. Per ADR-0006, the
+          # registry push lands when GitOps (ArgoCD) picks up images by
+          # tag — pushing here before then would make CI the source of
+          # truth for cluster state, which is the exact posture Stage-4
+          # of the adoption path graduates teams away from.
