@@ -8,6 +8,9 @@
 
 # ─── Configuration ──────────────────────────────────────────────────────────
 
+# single-source-of-truth
+PYTHON_VERSION := $(shell cut -d. -f1,2 .python-version)
+
 # Local Kind cluster name. Override with `make CLUSTER=foo infra-up`.
 CLUSTER     ?= gridstream
 KIND_CONFIG ?= kind/cluster.yaml
@@ -64,11 +67,21 @@ test: ## Run pytest with the 80% coverage gate.
 check-schema: ## Smoke-test charts/standard-service/values.schema.json (ADR-0011).
 	@scripts/check-chart-schema.sh
 
+# [SPRINT-1-CLEANUP] Behavior companion to check-schema (ADR-0011).
+# check-schema validates the schema FILE is well-formed; this validates
+# the schema's BEHAVIOR — that helm actually rejects const-pinned and
+# required-field violations at template/install time. Add the
+# corresponding step to .github/workflows/ci.yml during CI review.
+.PHONY: check-chart
+check-chart: ## Verify helm enforces the values schema (ADR-0011 phase 2).
+	@scripts/check-chart-behavior.sh
+
 ##@ Build (ADR-0009)
 
 .PHONY: build
 build: ## Build the stub's distroless production image.
 	docker build \
+		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
 		-f $(STUB_DIR)/Dockerfile \
 		-t $(STUB_IMAGE) \
 		.
@@ -76,6 +89,7 @@ build: ## Build the stub's distroless production image.
 .PHONY: build-dev
 build-dev: ## Build the stub's slim local-dev image (NOT FOR PRODUCTION).
 	docker build \
+		--build-arg PYTHON_VERSION=$(PYTHON_VERSION) \
 		-f $(STUB_DIR)/Dockerfile.dev \
 		-t $(STUB_IMAGE)-dev \
 		.
@@ -95,7 +109,7 @@ infra-down: ## Tear down the local Kind cluster.
 	kind delete cluster --name $(CLUSTER)
 
 .PHONY: deploy-local
-deploy-local: build check-schema ## Build, kind-load, and helm-install the stub.
+deploy-local: build check-schema check-chart ## Build, kind-load, and helm-install the stub.
 	kind load docker-image $(STUB_IMAGE) --name $(CLUSTER)
 	helm upgrade --install $(STUB_NAME) charts/standard-service \
 		--set app.name=$(STUB_NAME) \
