@@ -121,3 +121,7 @@ deploy-local: build check-schema check-chart ## Build, kind-load, and helm-insta
 	@echo "  kubectl get pods -l app.kubernetes.io/instance=$(STUB_NAME)"
 	@echo "  kubectl port-forward svc/$(STUB_NAME) 8000:80"
 	@echo "  curl http://localhost:8000/healthz"
+
+.PHONY: smoke-test
+smoke-test: ## Smoke-test the deployed standard-service-stub.
+	@scripts/smoke-test.sh
