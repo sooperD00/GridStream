@@ -10,6 +10,14 @@ DEVLOG/
 # .python-version
 # comment out is correct here - Python version is a paved-road policy decision
 
+# macOS Finder metadata
+.DS_Store
+
+# Tee'd test result files (per Sprint1.txt §7)
+packages/*/tests/results_*.txt
+
+
+
 
 
 # Byte-compiled / optimized / DLL files
