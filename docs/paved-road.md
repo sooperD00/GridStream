@@ -48,9 +48,14 @@ curl -X POST http://localhost:8000/echo \
     -d '{"message": "first traveler"}'
 ```
 
-If those curls return 200, the paved road works. Now read the rest of this
-document to understand *what* you're inheriting and *how to adopt it for
-your own service*.
+If those curls return 200, the paved road works.
+
+Or skip the manual curls and run `make smoke-test` — same endpoints, plus
+an ADR-0004 log-shape check, exits non-zero on any failure (so CI can gate
+on it later).
+
+Now read the rest of this document to understand *what* you're inheriting
+and *how to adopt it for your own service*.
 
 ---
 
