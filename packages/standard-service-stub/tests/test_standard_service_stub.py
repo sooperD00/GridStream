@@ -46,7 +46,7 @@ def test_echo_round_trips_message_with_metadata() -> None:
     body = response.json()
     assert body["message"] == "ping"
     assert body["service"] == "standard-service-stub"
-    assert "received_at" in body  # server-stamped; we don't pin its value
+    assert "server_received_at" in body  # server-stamped; we don't pin its value
 
 
 def test_echo_rejects_empty_message_with_422() -> None:
