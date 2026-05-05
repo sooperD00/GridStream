@@ -201,6 +201,15 @@ Stopping here yields the full technical narrative — paved road, reference serv
 
 ### Housekeeping
 - [ ] Install an admission-policy engine (Kyverno or OPA Gatekeeper — pick during sprint) and ship a baseline policy that rejects pods without `runAsNonRoot: true`, `readOnlyRootFilesystem: true`, and `capabilities.drop` containing `ALL`. Server-side defense-in-depth complementing ADR-0011's `values.schema.json`: the schema catches misconfiguration at `helm install`; admission policy catches anything that bypasses the chart. Pairs with the Sprint 3 observability stack — policy violations should surface in Grafana alongside the golden-signals dashboards.
+- [ ] Image-tag SHA discipline. Today's `:dev` tag mutation required
+      `helm uninstall + make deploy-local` to force a rollout because
+      helm sees the manifest as unchanged. ArgoCD reconciliation +
+      content-addressed image refs (or imagePullPolicy: Always with
+      digests) makes this a non-issue.
+- [ ] Wire `make smoke-test` into the post-deploy verification path.
+      Can't run in plain CI without a deployed cluster; ArgoCD post-
+      sync hooks or a kind-in-CI job is the right home. The script
+      already exits non-zero on failure, so it's gate-ready.
 
 ---
 
@@ -372,6 +381,14 @@ convenient.
 - [ ] CHANGELOG.md scaffolded with `[Unreleased]` section. Pre-@v1.
 - [ ] Semver policy documented in paved-road.md (patch/minor/major
       contract for adopters pinning @v1). Pre-@v1.
+- [ ] CONTRIBUTING.md note on script-mode discipline: new scripts in
+      scripts/ need `chmod +x` so the executable bit is committed
+      (mode 100755). Today's debugging burned 10 minutes on a permission-
+      denied for check-chart-behavior.sh that was committed as 100644.
+- [ ] CONTRIBUTING.md or paved-road.md note on Python upgrade
+      coordination: .python-version, the Dockerfile's builder FROM, and
+      the distroless image's bundled Python must all agree. The ARG
+      pattern centralizes the *string* but not the underlying coupling.
 
 ## Tech debt
 
