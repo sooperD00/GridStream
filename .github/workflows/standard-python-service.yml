@@ -40,7 +40,7 @@ on:
         description: |
           Image name without registry prefix or tag (e.g. "my-team-service",
           not "ghcr.io/myorg/my-team-service:latest"). The build step
-          concatenates this with ":${{ github.sha }}" to produce the final
+          concatenates this with ":<commit-sha>" to produce the final
           tag, so passing a registry-prefixed or tagged value yields an
           invalid double-tag like "ghcr.io/foo:latest:abc123" that fails
           at build time. Not currently enforced — see remaining_sprints.md
@@ -89,6 +89,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3.2.4
         with:
+          # major.minor floor — see CONTRIBUTING.md "Tool version pinning"
+          version: "0.11"
           enable-cache: true
 
       - name: Set up Python ${{ inputs.python-version }}

@@ -50,7 +50,10 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["S101"]  # `assert` is the whole point of a test
+"**/tests/**" = [
+    "S101",  # `assert` is the whole point of a test
+    "S603",  # subprocess.run inputs are controlled by the test author by definition
+]
 
 [tool.mypy]
 python_version = "3.11"  # mypy target-version

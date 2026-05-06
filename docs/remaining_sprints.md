@@ -201,6 +201,15 @@ Stopping here yields the full technical narrative — paved road, reference serv
 
 ### Housekeeping
 - [ ] Install an admission-policy engine (Kyverno or OPA Gatekeeper — pick during sprint) and ship a baseline policy that rejects pods without `runAsNonRoot: true`, `readOnlyRootFilesystem: true`, and `capabilities.drop` containing `ALL`. Server-side defense-in-depth complementing ADR-0011's `values.schema.json`: the schema catches misconfiguration at `helm install`; admission policy catches anything that bypasses the chart. Pairs with the Sprint 3 observability stack — policy violations should surface in Grafana alongside the golden-signals dashboards.
+- [ ] Image-tag SHA discipline. Today's `:dev` tag mutation required
+      `helm uninstall + make deploy-local` to force a rollout because
+      helm sees the manifest as unchanged. ArgoCD reconciliation +
+      content-addressed image refs (or imagePullPolicy: Always with
+      digests) makes this a non-issue.
+- [ ] Wire `make smoke-test` into the post-deploy verification path.
+      Can't run in plain CI without a deployed cluster; ArgoCD post-
+      sync hooks or a kind-in-CI job is the right home. The script
+      already exits non-zero on failure, so it's gate-ready.
 
 ---
 
@@ -260,6 +269,41 @@ Stopping here yields the complete platform story. The migration narrative is wha
   - py.typed marker registered in [tool.hatch.build.targets.wheel]
 ---
 - [ ] Add a recommendation to the Sprint 4 adoption playbook that adopting teams configure CODEOWNERS on their `values-*.yaml` files, requiring platform-team review for any change that touches `podSecurityContext` or `containerSecurityContext`. Social enforcement complementing the schema (ADR-0011); puts a human in the loop on the override path the schema can't pin without breaking legitimate use cases.
+
+### CI workflow follow-ups deferred from Sprint 1
+
+When registry push lands (per ADR-0006, Stage 4):
+
+- [ ] Wire registry push in `.github/workflows/standard-python-service.yml`
+      build job — replace the `[SPRINT-4-CLEANUP]` comment block with the
+      actual push step. Tag with both `${{ github.sha }}` (immutable, what
+      ArgoCD pins to) and a moving tag (`:main` or `:latest`) for human
+      convenience.
+- [ ] Add job-level `permissions:` to the build job:
+```yaml
+      build:
+        permissions:
+          contents: read    # checkout still needs this
+          packages: write   # registry push
+```
+      **Footgun:** job-level permissions *replace* workflow-level, they do
+      not merge. Dropping `contents: read` here will break `actions/checkout`
+      with a permissions error. The workflow-level `contents: read` does
+      not flow down once a job declares its own `permissions:` block.
+- [ ] Add a smoke-test step after build: `docker run --rm <image> --version`
+      (or equivalent health check). Catches "image built but won't start"
+      before it ships to the registry.
+- [ ] Revisit the `coverage-threshold` input. Has any adopter exercised
+      the override? If yes, are the cases legitimate, and should the
+      threshold be tuned? If no, the input is dead weight on the public
+      contract and worth removing at v2. **Trigger:** post-first-adopter,
+      same window as the version-pin audit.
+- [ ] Audit adopter version pins: run the GitHub code-search query for
+      `uses: sooperD00/gridstream/.github/workflows/standard-python-service.yml`
+      and confirm no adopter is still on a pre-push version that would
+      break when push lands. Coordinate cutover timing in #platform-standards.
+
+
 
 ## ⚪ Sprint 5: AWS Deployment (Deferred / Stretch)
 
@@ -325,3 +369,57 @@ This sprint is **explicitly deferred**. It does not block any Sprint 1–4 deliv
 - Feature flags (LaunchDarkly or Unleash) for production deploy/release decoupling
 - SOC 2 / NERC-CIP compliance documentation pass
 - A second reference service (different language? different domain?) to prove the paved road generalizes
+
+
+---
+
+## Housekeeping
+
+Cross-cutting items not tied to a sprint. Promote to a sprint commit when
+convenient.
+
+- [ ] CHANGELOG.md scaffolded with `[Unreleased]` section. Pre-@v1.
+- [ ] Semver policy documented in paved-road.md (patch/minor/major
+      contract for adopters pinning @v1). Pre-@v1.
+- [ ] CONTRIBUTING.md note on script-mode discipline: new scripts in
+      scripts/ need `chmod +x` so the executable bit is committed
+      (mode 100755). Today's debugging burned 10 minutes on a permission-
+      denied for check-chart-behavior.sh that was committed as 100644.
+- [ ] CONTRIBUTING.md or paved-road.md note on Python upgrade
+      coordination: .python-version, the Dockerfile's builder FROM, and
+      the distroless image's bundled Python must all agree. The ARG
+      pattern centralizes the *string* but not the underlying coupling.
+- [ ] Watch Dependabot PRs for Node-24-compatible action bumps
+      (checkout, setup-uv, docker/* still on Node 20). Forced switch
+      June 2, 2026; removal Sept 16. Existing weekly cadence should
+      catch each action's release; merge as they arrive.
+
+## Tech debt
+
+Things we'd do differently if we were starting over, or know we'll have
+to revisit. Triggers usually internal — pain accumulating in CI, refactor
+opportunities, deferred SPRINT-N-CLEANUP markers coming due.
+
+*(empty for now)*
+
+## Post-adoption
+
+Items waiting on external triggers — adopters arriving, scale crossing
+a threshold, a second cloud entering scope. Each item names its trigger.
+Promote when the trigger fires; delete from here when promoted.
+
+- [ ] Document the adopter-version code-search query in paved-road.md
+      under a new "Platform team operations" section.
+      **Trigger:** first external adopter merges a `uses:` line.
+- [ ] Scripted adopter audit (GitHub API → weekly CSV → manager report).
+      **Trigger:** ≥2 external adopters. Worth a dedicated ADR at build
+      time — "how the platform team monitors adoption" is architectural.
+      Backstage's service catalog is the prebuilt alternative to revisit
+      per ADR-0008 at this point.
+- [ ] Regex-validate `image-name` input in standard-python-service.yml
+      to reject registry-prefixed or tagged values (currently caught
+      only by build-step failure). Cheap to add — a single shell step
+      with a regex check before the build job runs.
+      **Trigger:** first adopter who hits the double-tag failure and
+      asks "why didn't you just check this?" If nobody hits it, the
+      documentation in the input description is sufficient.

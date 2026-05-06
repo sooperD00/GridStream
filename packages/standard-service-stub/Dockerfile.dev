@@ -13,9 +13,13 @@
 # ║  See ADR-0009 for the rationale.                                         ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
-FROM python:3.11-slim-bookworm
+# Global build arg — see Dockerfile for rationale. Same default keeps standalone
+# `docker build -f Dockerfile.dev` working; `make build-dev` overrides from .python-version.
+ARG PYTHON_VERSION=3.11
 
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /usr/local/bin/
+FROM python:${PYTHON_VERSION}-slim-bookworm
+
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /uvx /usr/local/bin/
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \

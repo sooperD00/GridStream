@@ -76,6 +76,12 @@ These have no sensible default. Helm fails fast if missing.
 | `app.name` | Container name and identification surface. Logs and dashboards rely on this being explicit per service. |
 | `image.repository` | The chart can't guess where your image lives. |
 
+> The empty strings in `values.yaml` defaults aren't placeholders to fill
+> in — they're the schema's rejection trigger. Tooling that runs against
+> bare defaults (e.g. plain `helm lint charts/standard-service`) will
+> fail; pass placeholder values to exercise chart behavior. See
+> `scripts/check-chart-behavior.sh` for the canonical pattern.
+
 ### SHOULD configure
 
 These have safe defaults, but a production-shaped service usually wants its

@@ -90,20 +90,31 @@ Wet-bulb fail-open interlocks, critical-asset tagging, and human-in-the-loop gat
 
 ## 5. Local Development
 
-> **Status:** Sprint 1 in progress. Commands below are the *target* state and will be live as sprints land.
+> **Status:** Sprint 1 complete — paved road shipped, no traffic on it yet. The stub service exists to prove the chart and reusable workflow function end-to-end. Sprint 2 brings the producer/consumer that actually exercises the road.
 
 ### Prerequisites
-- Python 3.11+ (managed via `uv` or `poetry`)
-- Docker & Docker Compose
-- Kind or Minikube
+- Python 3.11+ via [`uv`](https://docs.astral.sh/uv/)
+- Docker
+- [Kind](https://kind.sigs.k8s.io/) (Kubernetes-in-Docker)
 - Helm 3.0+
 
-### Quickstart (post-Sprint 1)
+### Quickstart
+
 ```bash
-make setup        # Install deps and pre-commit hooks
-make infra-up     # Start Kafka, Schema Registry, Prometheus/Grafana via Docker Compose
-make deploy-local # Helm-install the reference service into Kind
+make setup        # uv sync + install pre-commit hooks
+make infra-up     # Start the local Kind cluster
+make deploy-local # Build the stub container, kind-load it, helm-install
 ```
+
+Then:
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=standard-service-stub
+kubectl port-forward svc/standard-service-stub 8000:80
+curl http://localhost:8000/healthz
+```
+
+`make help` lists every target. For the full adoption walkthrough, see [`docs/paved-road.md`](./docs/paved-road.md).
 
 ---
 
@@ -112,27 +123,34 @@ make deploy-local # Helm-install the reference service into Kind
 ```
 .
 ├── .github/
-│   ├── workflows/        # Reusable CI workflow templates (Sprint 1)
-│   ├── CODEOWNERS
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── ISSUE_TEMPLATE/
-├── charts/               # Paved-road Helm chart (Sprint 1)
+│   └── workflows/
+│       ├── standard-python-service.yml   # Reusable – paved road's CI
+│       └── ci.yml                        # GridStream's caller
+├── charts/
+│   └── standard-service/                 # Paved-road Helm chart
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── CONTEXT.md
 │   ├── CONTRIBUTING.md
 │   ├── DISCOVERY.md
-│   ├── adr/              # Architectural Decision Records
+│   ├── paved-road.md                     # 10-min adoption tutorial
+│   ├── adr/                              # ADRs
 │   └── remaining_sprints.md
+├── packages/                             # uv workspace members (ADR-0010)
+│   ├── standard-service-stub/            # Sprint 1 — the paved road's first traveler
+│   ├── producer/                         # Sprint 2
+│   ├── consumer/                         # Sprint 2
+│   └── models/                           # Sprint 2 — shared Pydantic + Avro models
+├── kind/
+│   └── cluster.yaml                      # Local cluster config
 ├── infra/
-│   └── terraform/        # AWS modules (Sprint 5, stubbed)
-├── schemas/              # Avro contracts (Sprint 2)
-├── src/
-│   ├── producer/         # (Sprint 2)
-│   └── consumer/         # (Sprint 2)
-├── data/                 # Sample energy CSVs
-├── scripts/              # scaffold-a-service, etc. (Sprint 4)
-└── Makefile
+│   └── terraform/                        # AWS modules (Sprint 5, stubbed)
+├── schemas/                              # Avro contracts (Sprint 2)
+├── data/                                 # Sample energy CSVs (Sprint 2)
+├── scripts/                              # scaffold-a-service, etc. (Sprint 4)
+├── Makefile
+├── pyproject.toml                        # Workspace root (virtual; ADR-0010)
+└── .pre-commit-config.yaml
 ```
 
 ---
