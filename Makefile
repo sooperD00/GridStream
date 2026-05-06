@@ -60,19 +60,14 @@ test: ## Run pytest with the 80% coverage gate.
 		--cov-report=term-missing \
 		--cov-fail-under=80
 
-# [SPRINT-1-CLEANUP] Wire-up verification: confirm `jsonschema` is in dev deps,
-# helm is installed locally, then run this target end-to-end. Add the
-# corresponding step to .github/workflows/ci.yml during CI review.
 .PHONY: check-schema
+# Validates the schema FILE is well-formed
 check-schema: ## Smoke-test charts/standard-service/values.schema.json (ADR-0011).
 	@scripts/check-chart-schema.sh
 
-# [SPRINT-1-CLEANUP] Behavior companion to check-schema (ADR-0011).
-# check-schema validates the schema FILE is well-formed; this validates
-# the schema's BEHAVIOR — that helm actually rejects const-pinned and
-# required-field violations at template/install time. Add the
-# corresponding step to .github/workflows/ci.yml during CI review.
 .PHONY: check-chart
+# Validates schema's BEHAVIOR — that helm actually rejects const-pinned and
+# required-field violations at template/install time
 check-chart: ## Verify helm enforces the values schema (ADR-0011 phase 2).
 	@scripts/check-chart-behavior.sh
 

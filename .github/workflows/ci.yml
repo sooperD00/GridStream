@@ -50,3 +50,43 @@ jobs:
       dockerfile-context: .
       dockerfile-path: packages/standard-service-stub/Dockerfile
       image-name: gridstream-standard-service-stub
+  chart-schema:
+    name: Chart values schema (ADR-0011)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3.2.4
+        with:
+          enable-cache: true
+
+      - name: Sync dev deps
+        # jsonschema is a root-pyproject dev dep for the schema smoke test;
+        # --frozen so a stale lock fails CI loudly, matching the reusable
+        # workflow's lockfile discipline.
+        run: uv sync --all-extras --dev --frozen
+
+      - name: Validate values.schema.json (ADR-0011)
+        run: make check-schema
+
+      # with: no working-directory set - this job runs from repo root by default
+  chart-behavior:
+    name: Chart behavior (ADR-0011)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install Helm
+        # Helm doesn't have its own helm/setup-helm first-party action --
+        # Microsoft's K8s team filled the gap and the community settled there
+        # (it's the de facto standard for Helm-in-CI pipelines now). Hence `azure/`.
+        # This is a CI install path, nothing to do with what the action is coupled to.
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2  # v5.0.0
+
+      - name: Validate chart behavior (ADR-0011)
+        # Runs helm lint + 3× helm template (1 known-good, 2 known-bad).
+        # No uv/Python needed — pure helm.
+        run: make check-chart

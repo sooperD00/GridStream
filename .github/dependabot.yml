@@ -19,7 +19,7 @@ updates:
       # PRs land Monday morning; reviewing during the week; merge before next batch
       interval: weekly
       day: monday
-    # generous for 4 actions
+    # generous for 5 actions
     open-pull-requests-limit: 5
     commit-message:
       # commit convention: "chore(github-actions):"
