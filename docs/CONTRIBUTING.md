@@ -24,6 +24,20 @@ If you are modifying a `.avsc` file:
 2. Run the compatibility checker: `make schema-check`.
 3. Notify the #platform-standards Slack channel.
 
+### Tool version pinning
+
+Tool versions shared between CI and Dockerfiles are pinned to a `major.minor`
+floor — e.g. `uv@0.11`, not `uv@0.11.8`. This allows automatic patch updates
+(security and bugfix releases) without manual bumps, while breaking-version
+moves remain explicit PRs that touch this floor and the lockfile in the same
+diff.
+
+The same floor string appears in both `version:` inputs to GitHub Actions
+(`astral-sh/setup-uv@... { version: "0.11" }`) and `:major.minor` Docker
+image tags (`COPY --from=ghcr.io/astral-sh/uv:0.11 ...`), so CI and local
+builds resolve to the same family on every run. Drift between the two is
+the failure mode this convention is designed to prevent.
+
 ---
 
 ## References

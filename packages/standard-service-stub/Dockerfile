@@ -17,7 +17,7 @@ ARG PYTHON_VERSION=3.11
 FROM python:${PYTHON_VERSION}-slim-bookworm AS builder
 
 # uv via the official distroless installer image (pinned by tag).
-COPY --from=ghcr.io/astral-sh/uv:0.5 /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /uvx /usr/local/bin/
 
 # UV_COMPILE_BYTECODE=1       precompile .py→.pyc at build time so cold starts don't pay it
 # UV_LINK_MODE=copy           cache mount lives on a different filesystem; uv's default
