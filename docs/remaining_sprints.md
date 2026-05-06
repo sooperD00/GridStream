@@ -389,6 +389,10 @@ convenient.
       coordination: .python-version, the Dockerfile's builder FROM, and
       the distroless image's bundled Python must all agree. The ARG
       pattern centralizes the *string* but not the underlying coupling.
+- [ ] Watch Dependabot PRs for Node-24-compatible action bumps
+      (checkout, setup-uv, docker/* still on Node 20). Forced switch
+      June 2, 2026; removal Sept 16. Existing weekly cadence should
+      catch each action's release; merge as they arrive.
 
 ## Tech debt
 
