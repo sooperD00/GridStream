@@ -97,7 +97,6 @@ on: [push, pull_request]
 
 jobs:
   ci:
-    # requires v1 tag — coming once Sprint 1 ships post-verification [SPRINT-1-CLEANUP]
     uses: sooperD00/gridstream/.github/workflows/standard-python-service.yml@v1
     with:
       image-name: my-team-service
