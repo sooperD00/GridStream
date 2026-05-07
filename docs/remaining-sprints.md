@@ -8,78 +8,261 @@ For what's already shipped, see [`completed-sprints.md`](./completed-sprints.md)
 
 **Sequencing logic.** Sprint 1 ships the platform artifact before any service uses it, because a paved road defined by its first user isn't a road — it's a one-off. Sprint 2 exercises the road with a real workload, surfacing parameterization gaps. Sprint 3 layers GitOps and observability into the chart, so they become defaults for any future adopter rather than per-service work. Sprint 4 packages the result for organizational adoption. Each step is the natural prerequisite for the next; reordering them produces an artifact that's harder to adopt, not just one that takes longer to build.
 
+**Sub-sprint splits.** Sprint 2 was originally scoped as one sprint; planning at Sprint-1 close found the workload landed at ~2.5× the cadence above. Split into 2A (the wire contract), 2B (producer + chart Job template), 2C (consumer + safety + DLQ). Same cut-off discipline — each sub-sprint ends with the project in a defensible state on its own terms.
+
 ---
 
-## 🟡 Sprint 2: The Reference Service
+## 🟡 Sprint 2A: The Wire Contract
 
-**Goal (Reference Implementation):** Build the energy ingestion service and deploy it via Sprint 1's paved road. This sprint *consumes* the paved road; if the chart needed customization for the service, that's a signal the chart was under-parameterized in Sprint 1 — fix the chart, don't fork it.
+**Goal (Define Before You Use):** Land the Avro schema, the Pydantic mirror, and the local Kafka stack — the contract that 2B and 2C will be built against. This sprint *defines* the wire; producer and consumer come later. A contract that's only validated through its first consumer isn't a contract — it's a coincidence.
 
 ### Concepts Exercised
 This sprint engages directly with:
 - Avro schemas (`.avsc` format), Schema Registry compatibility modes (`BACKWARD`, `BACKWARD_TRANSITIVE`, `FORWARD`, `FULL`)
-- `confluent-kafka` Python client (Producer/Consumer API basics, `AvroSerializer`, `AvroDeserializer`)
-- DLQ routing pattern in Kafka
 - Pydantic v2 ↔ Avro coexistence pattern (Pydantic for in-process validation, Avro for the wire)
+- `packages/models/` as a workspace member shared by producer and consumer per ADR-0010
+- Local Kafka stack via Docker Compose: Kafka (KRaft), Confluent Schema Registry, Kafka UI
+
+### Decisions baked in (no further decision needed at kickoff)
+- **Pydantic↔Avro pattern:** hand-write both files; a round-trip test asserts they agree. Codegen deferred — revisit only if drift becomes painful.
+- **Kafka topology:** KRaft mode, no Zookeeper. Modern default; fewer moving parts in the dev stack.
+- **Compatibility mode:** `BACKWARD_TRANSITIVE` per ADR-0001.
 
 ### Tasks
 
-**2.1 — Schemas** (`schemas/power_reading.avsc`)
-- Fields aligning with SCADA + IoT requirements per `ARCHITECTURE.md` §2
-- Compatibility set to `BACKWARD_TRANSITIVE` per ADR-001
-- Include `device_id`, `timestamp`, `voltage`, `frequency`, `priority_level`, `firmware_version`
+**2A.1 — Avro schema** (`schemas/power_reading.avsc`)
+- Fields aligning with SCADA + IoT requirements per ARCHITECTURE.md §2 and §6
+- Compatibility set to `BACKWARD_TRANSITIVE` per ADR-0001
+- Includes `device_id`, `timestamp`, `voltage`, `frequency`, `priority_level`, `firmware_version`
 
-**2.2 — Pydantic models** (`src/models/power_reading.py`)
-- Mirrors the Avro schema with field validators
-- Catches "zero-voltage" / "null-ID" anomalies before serialization
-- Type-checked via `mypy` in the shared CI pipeline
+**2A.2 — Models package** (`packages/models/`)
+- Workspace member per ADR-0010, sibling to `standard-service-stub`
+- `pyproject.toml` shaped after the stub: hatchling build, `py.typed` marker, `[tool.mypy]` strict block
+- `src/gridstream_models/power_reading.py`: Pydantic v2 model mirroring the Avro schema with field validators that catch zero-voltage and null-ID anomalies before serialization
+- `__init__.py` with `__version__`; `py.typed` registered in `[tool.hatch.build.targets.wheel]`
+- README replaces the Sprint-1 placeholder
 
-**2.3 — Producer** (`src/producer/main.py`)
-- Reads CSV (sample energy data in `data/`)
-- Pydantic-validates each row
-- Avro-serializes via Schema Registry client
-- Publishes to `gridstream.readings`
-- Circuit breaker on Kafka unavailability (graceful buffer/fail per ADR-003)
-- Structured logging with `device_id` and `schema_version` context per ADR-004
+**2A.3 — Pydantic↔Avro round-trip + schema/model parity test** (`packages/models/tests/`)
+- Round-trip: Pydantic instance → Avro encode → Avro decode → Pydantic instance, assert equality
+- Parity: test fails if the Avro schema gains a field the Pydantic model doesn't have, or vice versa (this is the safety net that lets "hand-write both" stay sane)
+- Uses the fixture-based test pattern (see Housekeeping below)
 
-**2.4 — Consumer** (`src/consumer/main.py`)
-- Subscribes to `gridstream.readings`
-- DLQ routing to `gridstream.failed` on schema or business validation failure
-- Idempotency check via `msg_id = device_id + timestamp` (in-process dict for now; Redis stub deferred)
-- Wet-bulb safety interlock (logs warning, suspends action) per ADR-003
+**2A.4 — Local Kafka stack** (`docker-compose.yml` at repo root)
+- Kafka (KRaft mode), Confluent Schema Registry, Kafka UI (provectus or equivalent)
+- Topics created at startup: `gridstream.readings`, `gridstream.failed`
+- Wired into `make infra-up` alongside the existing Kind cluster (composite target — Kind for the chart's runtime, Compose for the messaging substrate)
 
-**2.5 — Local Docker Compose for Kafka stack** (`docker-compose.yml`)
-- Kafka, Zookeeper (or KRaft), Schema Registry, Kafka UI for debugging
-- Wired into `make infra-up`
+**2A.5 — Schema-evolution smoke test**
+- Add a new optional field to `power_reading.avsc`, register against the local Schema Registry, verify the `BACKWARD_TRANSITIVE` compatibility check passes
+- Distinct from 2A.3: this validates *the registry is doing its job*, not that the Pydantic model agrees with the Avro file. Both matter.
+- Lives as a script under `scripts/` (callable from a Make target) so it runs against any environment with a Schema Registry
 
-**2.6 — Deploy via paved road**
-- The consumer Helm release uses the Sprint 1 chart, parameterized via `charts/standard-service/values-consumer.yaml`
-- The producer is a CronJob (or one-shot Job) using the same chart's job template, or a tiny chart extension if the base chart can't accommodate jobs cleanly
+**2A.6 — Workspace-root cleanup for the models package**
+- `pyproject.toml`: add `packages/models` to `[tool.uv.workspace] members`
+- Remove `packages/models` from `[tool.ruff] extend-exclude`
+- Add `gridstream_models` to `[tool.ruff.lint.isort] known-first-party`
+- Add models test path to `[tool.pytest.ini_options] testpaths`
+- (Producer/consumer cleanups stay marked — they belong to 2B/2C.)
 
 ### Definition of Done
-- `python src/producer/main.py --source data/sample_energy.csv` publishes 1,000 valid Avro messages
-- A poison-pill row in the CSV is routed to `gridstream.failed` without crashing the consumer
-- `helm upgrade --install gridstream-consumer charts/standard-service -f values-consumer.yaml` deploys cleanly
-- Schema evolution test: add a new optional field to `power_reading.avsc`, verify backward compatibility check passes
+- `make infra-up` brings up Kind + Kafka + Schema Registry + Kafka UI
+- `kafka-topics --list` shows `gridstream.readings` and `gridstream.failed`
+- Pydantic↔Avro round-trip test passes; schema/model parity test passes
+- Schema-evolution test: registering an Avro schema with one new optional field returns a compatible response from the Schema Registry
+- `git grep "SPRINT-2-CLEANUP"` shows no models-related markers remaining (producer/consumer markers expected to remain)
 
 ### Scope / Anti-scope
-- **In:** Producer, consumer, schemas, models, DLQ, idempotency, safety interlock, local Kafka stack.
-- **Out:** OpenTelemetry, Prometheus metrics, ArgoCD sync, lag-based HPA (Sprint 3). Distributed Redis idempotency (deferred). Real cloud Kafka (Sprint 5).
+- **In:** Avro schema, Pydantic models package, Pydantic↔Avro pattern, local Kafka stack, schema-evolution smoke test.
+- **Out:** Producer (2B), consumer (2C), DLQ logic, idempotency, safety interlock, deploy via paved road, chart Job template.
 
 ### Cut-off Value
-Stopping here yields the paved road plus a working reference service — a complete reference service built on its own platform's standards, demonstrating schema evolution, DLQ handling, and safety-critical defaults.
+Stopping here yields the wire contract — Avro schema, Pydantic mirror, and a running local Kafka + Schema Registry stack that proves both. 2B and 2C have something concrete to build against; the contract is independently testable without traffic on it yet.
 
 ### Housekeeping
-- [ ] number of tests are going to ~quintuple here. Use this pattern and patterns like it (individual TestClients in sprint 1 tests were good for a learning pattern across 4 tests, but we should be more efficient in sprint 2)
-	```
-	@pytest.fixture
-	def client():
-	    with TestClient(app) as c:
-	        yield c
+- [ ] Adopt the fixture-based test pattern as the convention from this sprint forward — Sprint 1's "individual TestClient per test" worked as a learning shape across 4 tests but doesn't scale through 2A → 2C's quintupled test count:
+    ```python
+    @pytest.fixture
+    def client():
+        with TestClient(app) as c:
+            yield c
 
-	def test_healthz_returns_200_with_alive_status(client) -> None:
-	    response = client.get("/healthz")
-	    # ...
-	```
+    def test_healthz_returns_200_with_alive_status(client) -> None:
+        response = client.get("/healthz")
+        # ...
+    ```
+
+---
+
+## 🟡 Sprint 2B: Producer + Chart Job Template
+
+**Goal (First Real Adopter):** Build the synthetic producer and add the Job/CronJob template to the paved-road chart. This is the sprint where the chart's parameterization gets stress-tested against a non-long-running workload. If the chart can't accommodate a Job cleanly, that's a parameterization gap the chart needs to close — fix the chart, don't fork it.
+
+### Concepts Exercised
+This sprint engages directly with:
+- `confluent-kafka` Python client (Producer API basics, `AvroSerializer`, Schema Registry client)
+- Circuit breaker pattern on Kafka unavailability per ADR-0003
+- Helm chart Job/CronJob templates: different probe semantics, different completion semantics, different `restartPolicy` than a Deployment
+- Per-member Dockerfile shape (multi-stage distroless from ADR-0009)
+
+### Decisions to make at kickoff (deferred from planning)
+- [ ] **Producer deployment shape.** Three options, each with different chart consequences:
+  - (a) one-shot Job that runs the CSV through and exits
+  - (b) CronJob that runs on a schedule
+  - (c) long-running Deployment that loops the CSV indefinitely (in which case the producer also needs `/healthz` and `/readyz` per the chart's const-pinned probe paths)
+- [ ] **If Job/CronJob:** values shape for the new `job:` block in the chart. The chart README's Sprint-2-CLEANUP entry already commits to the values being "namespaced under `deployment:` so a sibling `job:` block can be added without breaking changes" — this is where that sibling block actually lands. `values.schema.json` will need a corresponding branch.
+- [ ] **Sample data origin.** Three options:
+  - (a) synthesize on the fly in producer code — fastest, but the data shape is whatever the producer says it is
+  - (b) vendor a small (~1k-row) CSV in `data/` — most reproducible
+  - (c) download-in-script from NREL/Pecan Street as a `make data` target — most honest about the data source
+  Whichever option lands, the dataset must include at least one poison-pill row for 2C's DLQ test.
+
+### Tasks (concrete after decisions above)
+
+**2B.1 — Producer package** (`packages/producer/`)
+- Workspace member; `pyproject.toml` shaped after the stub
+- Depends on `gridstream-models` via `[tool.uv.sources]` per ADR-0010
+- `src/gridstream_producer/main.py`:
+  - Reads CSV from `data/`
+  - Pydantic-validates each row using `gridstream-models`
+  - Avro-serializes via Schema Registry client
+  - Publishes to `gridstream.readings`
+  - Circuit breaker on Kafka unavailability (graceful buffer/fail per ADR-0003)
+  - Structured logging with `device_id` and `schema_version` context per ADR-0004
+- Replaces the Sprint-1 placeholder README
+
+**2B.2 — Producer Dockerfile** (`packages/producer/Dockerfile`)
+- Multi-stage distroless per ADR-0009, modeled on the stub's Dockerfile
+- `Dockerfile.dev` slim variant for local debugging
+
+**2B.3 — Chart Job template** (`charts/standard-service/templates/job.yaml`)
+- Renders Job or CronJob based on the values selector chosen above
+- Shares `_helpers.tpl` labels/naming with the Deployment template
+- `values.schema.json` updated with the `job:` branch
+- Chart README updated: clear what's a Deployment-shaped service vs. a Job-shaped service, what each tier (must override / should configure / should not override) means in each shape
+
+**2B.4 — Producer values file** (`charts/standard-service/values-producer.yaml`)
+- Wires the producer image, Kafka broker config, Schema Registry URL, sample CSV path
+- The first real exercise of the chart's Job branch
+
+**2B.5 — Sample data** (`data/sample_energy.csv` or generator/downloader)
+- Per the decision above
+- At least one poison-pill row for 2C's DLQ test
+
+**2B.6 — Tests** (`packages/producer/tests/`)
+- Fixture pattern from 2A
+- CSV-read happy path
+- Kafka-unavailable → circuit breaker exercises (no crash, structured log line, graceful fail)
+- Pydantic validation failure on a bad row → row skipped, logged, doesn't crash the producer
+- Avro serialization edge case → handled per the producer's documented contract
+
+**2B.7 — Deploy via paved road**
+- `helm upgrade --install gridstream-producer charts/standard-service -f values-producer.yaml` deploys cleanly into Kind
+- Cross-stack networking: producer running in Kind talks to Kafka running in Compose. Document the connection string convention in `charts/standard-service/README.md` or `docs/paved-road.md` if it isn't obvious from the values file.
+
+**2B.8 — Workspace-root cleanup for the producer package**
+- `pyproject.toml` updates analogous to 2A.6 but for `packages/producer`
+
+### Definition of Done
+- `python -m gridstream_producer --source data/sample_energy.csv` publishes 1,000 valid Avro messages to local Kafka
+- `helm upgrade --install gridstream-producer ...` deploys cleanly via the chart's new Job template
+- Circuit-breaker test passes (Kafka stopped → producer retries gracefully, doesn't crash)
+- `helm template` of the chart's Job branch validates against `values.schema.json`; misuse (wrong shape, missing required) fails fast at install time
+- `git grep "SPRINT-2-CLEANUP"` shows no producer-related markers remaining
+
+### Scope / Anti-scope
+- **In:** Producer service, Dockerfile, chart Job/CronJob template, values-producer.yaml, sample data, deploy via paved road.
+- **Out:** Consumer logic (2C — producer publishes; routing decisions are the consumer's job), DLQ routing (2C), idempotency (2C), safety interlock (2C), OTel (Sprint 3).
+
+### Cut-off Value
+Stopping here yields a working synthetic producer on the paved road, exercising the chart's Job template — the first non-long-running workload to deploy via the standard chart, validating the values-shape generalization. Messages pile up in `gridstream.readings` waiting for a consumer, which is fine; the producer half of the contract is provably satisfied.
+
+### Housekeeping
+- [ ] Idempotency dict for 2C is "in-process for now; Redis stub deferred." Per ADR-0004's silent-TODO ban, when the dict lands in 2C it needs either a `NotImplementedError`-style structured stub at the swap-point OR a SPRINT CLEANUP marker in the consumer code with the future-Redis sprint reference. Note here so 2C remembers.
+
+---
+
+## 🟡 Sprint 2C: Consumer + Safety + DLQ
+
+**Goal (Safety-Critical Pillars Made Real):** Build the resilient consumer with DLQ routing, idempotency, and the wet-bulb safety interlock. This is the sprint where the safety pillars from ADR-0003 become code and not just prose, and where the Sprint-1 stub's `[SPRINT-2-CLEANUP] Sprint 2's consumer will check Kafka and Schema Registry availability here` finally has somewhere to land.
+
+### Concepts Exercised
+This sprint engages directly with:
+- `confluent-kafka` Python client (Consumer API, `AvroDeserializer`, manual offset commits)
+- DLQ routing pattern in Kafka — route, don't crash; single-message failures don't become pipeline outages
+- Idempotency via in-process dict (`msg_id = device_id + timestamp`)
+- Wet-bulb safety interlock per ADR-0003
+- Long-running process with HTTP health endpoints (chart-compliance: probes are const-pinned per ADR-0011)
+
+### Decisions to make at kickoff (deferred from planning)
+- [ ] **Consumer's HTTP surface architecture.** The chart const-pins `/healthz` and `/readyz`, so the consumer must expose them. Three options:
+  - (a) FastAPI app with the Kafka consumer as a background task — single process, async coordination, matches the stub's shape
+  - (b) Kafka consumer in main thread, HTTP server on a side thread — explicit decoupling, less framework
+  - (c) Sidecar pattern: Kafka consumer in the main container, separate health-check container in `deployment.extraContainers` — most isolation, most chart complexity
+- [ ] **`/readyz` semantics on dependency loss.** What does the readiness probe return when Kafka or Schema Registry are unavailable? 503 (matches the stub's foreshadowing comment) makes the readiness probe genuinely meaningful — Kubernetes pulls the pod out of service rotation while keeping it alive, which is the right behavior. Confirm before implementation.
+
+### Tasks (concrete after decisions above)
+
+**2C.1 — Consumer package** (`packages/consumer/`)
+- Workspace member; depends on `gridstream-models` via `[tool.uv.sources]`
+- `src/gridstream_consumer/main.py`:
+  - Subscribes to `gridstream.readings`
+  - Avro-deserializes via Schema Registry
+  - DLQ routing to `gridstream.failed` on schema or business validation failure
+  - Idempotency check via `msg_id = device_id + timestamp` (in-process dict; carries the SPRINT CLEANUP marker per the 2B housekeeping note)
+  - Wet-bulb safety interlock per ADR-0003 — the *interlock* (when triggered, log and suspend) lands in this sprint; the *safety-event detection* (weather API integration) and the *dispatch action being suspended* (downstream SCADA call) are explicitly stubbed via `NotImplementedError` per ADR-0004 with the relevant future-sprint reference
+  - HTTP `/healthz` and `/readyz` per the architecture decision above
+  - `/readyz` returns 503 when the Kafka client or Schema Registry client report disconnected
+- Structured logging with `device_id`, `schema_version`, and `msg_id` context per ADR-0004
+- Replaces the Sprint-1 placeholder README
+
+**2C.2 — Consumer Dockerfile** (`packages/consumer/Dockerfile`)
+- Multi-stage distroless per ADR-0009; same shape as producer
+- `Dockerfile.dev` slim variant
+
+**2C.3 — Consumer values file** (`charts/standard-service/values-consumer.yaml`)
+- Wires the consumer image, Kafka broker, Schema Registry URL
+- Stays on the chart's existing Deployment branch (long-running process, both probes)
+
+**2C.4 — Tests** (`packages/consumer/tests/`)
+- Fixture pattern throughout
+- Happy path: message consumed, processed, offset committed
+- Poison pill: malformed message routes to `gridstream.failed`, consumer doesn't crash, partition isn't blocked
+- Idempotency: duplicate `msg_id` → second occurrence skipped
+- Safety event simulated: interlock fires, dispatch suspended, log line emitted
+- `/healthz` returns 200 when alive
+- `/readyz` returns 503 when the Kafka client is disconnected
+
+**2C.5 — Deploy via paved road**
+- `helm upgrade --install gridstream-consumer charts/standard-service -f values-consumer.yaml` deploys cleanly
+- Both probes go green
+- End-to-end smoke: producer (from 2B) publishes 1,000 messages including the poison pill → consumer processes valid messages, DLQs the poison pill, doesn't double-process anything
+
+**2C.6 — Workspace-root cleanup for the consumer package**
+- `pyproject.toml` updates analogous to 2A.6 but for `packages/consumer`
+
+**2C.7 — Final repo-wide [SPRINT-2-CLEANUP] sweep**
+- Per ADR-0004, this is the sprint-close mechanical check
+- `git grep "SPRINT-2-CLEANUP"` returns zero matches
+- Future SPRINT CLEANUP markers (Redis idempotency, weather API integration, downstream dispatch) are explicitly retained — they belong to a different cycle and should not be cleared here
+
+### Definition of Done
+- Consumer deployed via paved road; both probes green
+- Poison-pill row from 2B's CSV routes to `gridstream.failed` without crashing the consumer
+- Duplicate-message idempotency test passes
+- Safety-event simulation fires the interlock with the right log line
+- End-to-end: `make infra-up && helm install gridstream-producer ... && helm install gridstream-consumer ... && producer publishes 1,000 messages` → consumer processes them, DLQs the poison pill, doesn't double-process anything
+- `git grep "SPRINT-2-CLEANUP"` returns no matches; Future SPRINT CLEANUP markers documented and intentional
+
+### Scope / Anti-scope
+- **In:** Consumer service, DLQ routing, idempotency, wet-bulb interlock, deploy via paved road, end-to-end smoke.
+- **Out:** OTel instrumentation (Sprint 3), Prometheus metrics (Sprint 3), lag-based HPA (Sprint 3), Redis idempotency (future), real cloud Kafka (Sprint 5), weather API integration for safety-event detection (future), downstream SCADA dispatch (future).
+
+### Cut-off Value
+Stopping here yields the complete reference service: paved road plus producer plus consumer with safety-critical defaults (DLQ, idempotency, wet-bulb interlock) on a working local stack. Schema evolution, defensive error handling, and the safety pillars from ADR-0003 are all proven in code, not just in prose.
+
+### Housekeeping
+- [ ] (Anything that surfaces during 2C lands here. Empty at planning time.)
+
 ---
 
 ## 🟠 Sprint 3: GitOps + Observability
@@ -279,12 +462,15 @@ This sprint is **explicitly deferred**. It does not block any Sprint 1–4 deliv
 
 ## 📝 Future Scope (Beyond Sprint 5)
 
-- Distributed idempotency via Redis (replacing the in-process dict from Sprint 2)
+- Distributed idempotency via Redis (replacing the in-process dict from Sprint 2C)
 - Hardware-in-the-loop testing with real smart-meter hardware
 - Multi-region MSK federation
 - Feature flags (LaunchDarkly or Unleash) for production deploy/release decoupling
 - SOC 2 / NERC-CIP compliance documentation pass
 - A second reference service (different language? different domain?) to prove the paved road generalizes
+- Weather-API integration for the wet-bulb safety-event detection stubbed in 2C
+- Downstream SCADA dispatch action stubbed in 2C's safety interlock
+- Avro-lint CI step for breaking-change detection on schema PRs (referenced in ARCHITECTURE.md §3.4)
 
 
 ---
@@ -302,6 +488,7 @@ convenient.
 - [ ] When a second script wants `PY_STRIP_DOCSTRINGS` or `PY_CANONICALIZE` (the inline Python heredocs in `check-no-code-changes.sh`), extract them to `scripts/lib/diff-helpers.sh` rather than copy-paste. Two real consumers will tell you the right interface; one consumer can only guess. Trigger phrases: a new `scripts/check-*.sh` that needs to canonicalize structured config, or any script that needs to compare Python ASTs.
 - [ ] Refactor `check_no_code_changes.py` to batch git operations: replace per-file `git show` calls with one `git cat-file --batch` invocation (~22 subprocesses → 1). Trigger: the script feels slow on Windows, or you want it usable in CI on a runner with cold-start subprocess overhead.
 - [ ] Add `.gitattributes` with `*.sh text eol=lf` to enforce LF endings on shell scripts regardless of platform autocrlf settings. Pre-empts the "mysterious '\r': command not found errors" rabbit hole the next Windows contributor would otherwise fall into.
+- [ ] README.md roadmap table (§3) still lists Sprint 2 as one row. Either expand to 2A/2B/2C or leave as nominal "Sprint 2" for the marketing surface and let this doc be the execution detail. Decide before the README is read by an outside audience.
 
 ## Tech debt
 
