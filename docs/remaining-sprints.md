@@ -300,6 +300,8 @@ convenient.
 - [ ] CONTRIBUTING.md or paved-road.md note on Python upgrade coordination: .python-version, the Dockerfile's builder FROM, and the distroless image's bundled Python must all agree. The ARG pattern centralizes the *string* but not the underlying coupling.
 - [ ] Watch Dependabot PRs for Node-24-compatible action bumps (checkout, setup-uv, docker/* still on Node 20). Forced switch June 2, 2026; removal Sept 16. Existing weekly cadence should catch each action's release; merge as they arrive.
 - [ ] When a second script wants `PY_STRIP_DOCSTRINGS` or `PY_CANONICALIZE` (the inline Python heredocs in `check-no-code-changes.sh`), extract them to `scripts/lib/diff-helpers.sh` rather than copy-paste. Two real consumers will tell you the right interface; one consumer can only guess. Trigger phrases: a new `scripts/check-*.sh` that needs to canonicalize structured config, or any script that needs to compare Python ASTs.
+- [ ] Refactor `check_no_code_changes.py` to batch git operations: replace per-file `git show` calls with one `git cat-file --batch` invocation (~22 subprocesses → 1). Trigger: the script feels slow on Windows, or you want it usable in CI on a runner with cold-start subprocess overhead.
+- [ ] Add `.gitattributes` with `*.sh text eol=lf` to enforce LF endings on shell scripts regardless of platform autocrlf settings. Pre-empts the "mysterious '\r': command not found errors" rabbit hole the next Windows contributor would otherwise fall into.
 
 ## Tech debt
 
