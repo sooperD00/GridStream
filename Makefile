@@ -120,3 +120,11 @@ deploy-local: build check-schema check-chart ## Build, kind-load, and helm-insta
 .PHONY: smoke-test
 smoke-test: ## Smoke-test the deployed standard-service-stub.
 	@scripts/smoke-test.sh
+
+.PHONY: check-no-code-changes
+check-no-code-changes:  ## Verify pending changes touch only comments/docs
+	@scripts/check-no-code-changes.sh $(ARGS)
+
+.PHONY: check-docs-only
+check-docs-only: check-no-code-changes  ## Pre-deploy guard: safe to skip re-test?
+	@echo "✓ docs-only change confirmed — re-test not required"

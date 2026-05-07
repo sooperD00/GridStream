@@ -76,3 +76,10 @@ repos:
         # which would otherwise trip the regex. The rule applies to code, not to
         # the rule's own definition.
         exclude: ^\.pre-commit-config\.yaml$
+
+  # for shell bugs like: unquoted vars, [[ ]] vs [ ] portability issues,
+  # missing set -euo pipefail
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
