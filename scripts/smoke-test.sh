@@ -24,6 +24,12 @@ ok()      { printf "  ${GREEN}✓${RESET} %s\n" "$1"; PASS=$((PASS+1)); }
 ko()      { printf "  ${RED}✗${RESET} %s\n" "$1"; FAIL=$((FAIL+1)); }
 section() { printf "\n${CYAN}%s${RESET}\n" "$1"; }
 
+# Note: tests below use if-then-else rather than `cmd && ok || ko`. The
+# &&-chain form trips SC2015 because a failing ok would falsely trigger ko.
+# Each test's failure message includes context (response body, status code)
+# that's specific enough to be worth repeating per-test rather than DRYing
+# into a helper that would lose the per-test debugging detail.
+
 # ─── port-forward setup (cleaned up on any exit path) ───────────────────────
 
 section "Port-forward svc/${SERVICE} ${LOCAL_PORT}→${SVC_PORT}"
@@ -49,45 +55,61 @@ done
 section "Probes"
 
 healthz_body=$(curl -sf "${BASE_URL}/healthz")
-echo "$healthz_body" | grep -q '"status":"alive"' \
-  && ok "/healthz status=alive" \
-  || ko "/healthz body: $healthz_body"
-echo "$healthz_body" | grep -q '"service":"standard-service-stub"' \
-  && ok "/healthz service=standard-service-stub" \
-  || ko "/healthz service field wrong"
+if echo "$healthz_body" | grep -q '"status":"alive"'; then
+  ok "/healthz status=alive"
+else
+  ko "/healthz body: $healthz_body"
+fi
+if echo "$healthz_body" | grep -q '"service":"standard-service-stub"'; then
+  ok "/healthz service=standard-service-stub"
+else
+  ko "/healthz service field wrong"
+fi
 
 readyz_body=$(curl -sf "${BASE_URL}/readyz")
-echo "$readyz_body" | grep -q '"status":"ready"' \
-  && ok "/readyz status=ready" \
-  || ko "/readyz body: $readyz_body"
+if echo "$readyz_body" | grep -q '"status":"ready"'; then
+  ok "/readyz status=ready"
+else
+  ko "/readyz body: $readyz_body"
+fi
 
 section "Swagger UI"
 docs_code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/docs")
-[ "$docs_code" = "200" ] \
-  && ok "/docs returns 200 (Swagger renders)" \
-  || ko "/docs returned ${docs_code}"
+if [ "$docs_code" = "200" ]; then
+  ok "/docs returns 200 (Swagger renders)"
+else
+  ko "/docs returned ${docs_code}"
+fi
 
 section "Echo — Pydantic round-trip"
 echo_body=$(curl -sf -X POST "${BASE_URL}/echo" \
   -H 'content-type: application/json' \
   -d '{"message":"hello"}')
-echo "$echo_body" | grep -q '"message":"hello"' \
-  && ok "POST /echo mirrors message" \
-  || ko "/echo body: $echo_body"
-echo "$echo_body" | grep -q '"server_received_at"' \
-  && ok "/echo includes server_received_at (default_factory ran server-side)" \
-  || ko "/echo missing server_received_at"
-echo "$echo_body" | grep -q '"service":"standard-service-stub"' \
-  && ok "/echo stamps service name" \
-  || ko "/echo service field wrong"
+if echo "$echo_body" | grep -q '"message":"hello"'; then
+  ok "POST /echo mirrors message"
+else
+  ko "/echo body: $echo_body"
+fi
+if echo "$echo_body" | grep -q '"server_received_at"'; then
+  ok "/echo includes server_received_at (default_factory ran server-side)"
+else
+  ko "/echo missing server_received_at"
+fi
+if echo "$echo_body" | grep -q '"service":"standard-service-stub"'; then
+  ok "/echo stamps service name"
+else
+  ko "/echo service field wrong"
+fi
 
 section "Echo — Pydantic rejects empty (proves validator is real, not theatrical)"
 empty_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${BASE_URL}/echo" \
   -H 'content-type: application/json' \
   -d '{"message":""}')
-[ "$empty_code" = "422" ] \
-  && ok "POST /echo {message:\"\"} → 422" \
-  || ko "empty-message POST returned ${empty_code} (expected 422)"
+if [ "$empty_code" = "422" ]; then
+  ok "POST /echo {message:\"\"} → 422"
+else
+  ko "empty-message POST returned ${empty_code} (expected 422)"
+fi
 
 # ─── ADR-0004 structured-logging shape check ────────────────────────────────
 

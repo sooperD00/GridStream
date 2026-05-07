@@ -31,16 +31,18 @@ repos:
         # [SPRINT-2-CLEANUP] Widen to ^packages/[^/]+/(src|tests)/ when
         # producer/consumer/models land. Likely Pattern: every member
         # gets src + tests checked under strict mode.
-        files: ^packages/standard-service-stub/(src|tests)/
+        files: ^(scripts/|packages/standard-service-stub/(src|tests)/)
         # [SPRINT-2-CLEANUP] additional_dependencies grows as members
         # arrive — confluent-kafka stubs for the consumer, avro libs
         # for the producer. mypy needs runtime types to check imports
         # across package boundaries.
+        types: [python]
         additional_dependencies:
           - pydantic
           - fastapi
           - pytest        # for the typed pytest API in tests
           - httpx         # TestClient sits on httpx
+          - types-PyYAML  # for scripts/check_no_code_changes.py
 
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v3.4.0
@@ -71,11 +73,12 @@ repos:
         entry: '\[SPRINT-(?!\d+-CLEANUP\])'
         language: pygrep
         types: [text]
-        # Self-exclusion: this file documents the canonical marker form in prose
-        # (e.g. the hook's own name uses [SPRINT-N-CLEANUP] as a meta-variable),
-        # which would otherwise trip the regex. The rule applies to code, not to
-        # the rule's own definition.
-        exclude: ^\.pre-commit-config\.yaml$
+        # Self-exclusion: these files document the canonical marker form in
+        # prose (this hook's own name uses [SPRINT-N-CLEANUP] as a meta-
+        # variable; ADR-0004 defines the convention with N as a
+        # placeholder), which would otherwise trip the regex. The rule
+        # applies to code, not to the rule's own definition.
+        exclude: ^(\.pre-commit-config\.yaml|docs/adr/0004-logging-and-stub-standards\.md)$
 
   # for shell bugs like: unquoted vars, [[ ]] vs [ ] portability issues,
   # missing set -euo pipefail
@@ -83,3 +86,4 @@ repos:
     rev: v0.10.0.1
     hooks:
       - id: shellcheck
+        args: [--format=gcc]

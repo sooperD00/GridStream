@@ -21,9 +21,31 @@ EOF
 # ── 2. Helm enforces the schema ─────────────────────────────────────────────
 # expect_ok / expect_fail wrap `helm template` so the test cases below read as
 # "this set of values should/should not render."
-run()         { helm template test "${CHART}" "$@" > /dev/null 2>&1; }
-expect_ok()   { local label="$1"; shift; run "$@" && echo "✓ ${label}" || { echo "✗ ${label} FAILED (expected helm template to succeed)"; exit 1; }; }
-expect_fail() { local label="$1"; shift; run "$@" && { echo "✗ ${label} NOT REJECTED (expected helm template to fail)"; exit 1; } || echo "✓ ${label}"; }
+#
+# Implemented with if-then-else (rather than `run "$@" && ok || fail`) to
+# avoid the SC2015 trap where a failing branch-action would falsely trigger
+# the other branch. Call sites are unchanged from the &&-chain version.
+run() { helm template test "${CHART}" "$@" > /dev/null 2>&1; }
+
+expect_ok() {
+    local label="$1"; shift
+    if run "$@"; then
+        echo "✓ ${label}"
+    else
+        echo "✗ ${label} FAILED (expected helm template to succeed)"
+        exit 1
+    fi
+}
+
+expect_fail() {
+    local label="$1"; shift
+    if run "$@"; then
+        echo "✗ ${label} NOT REJECTED (expected helm template to fail)"
+        exit 1
+    else
+        echo "✓ ${label}"
+    fi
+}
 
 # Known-good: minimum viable values render cleanly.
 expect_ok "known-good values render" \

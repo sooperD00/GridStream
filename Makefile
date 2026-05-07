@@ -71,6 +71,10 @@ check-schema: ## Smoke-test charts/standard-service/values.schema.json (ADR-0011
 check-chart: ## Verify helm enforces the values schema (ADR-0011 phase 2).
 	@scripts/check-chart-behavior.sh
 
+.PHONY: hooks
+hooks: ## Run all pre-commit hooks against all files (broader gate than lint)
+	@uv run pre-commit run --all-files
+
 ##@ Build (ADR-0009)
 
 .PHONY: build
@@ -121,9 +125,10 @@ deploy-local: build check-schema check-chart ## Build, kind-load, and helm-insta
 smoke-test: ## Smoke-test the deployed standard-service-stub.
 	@scripts/smoke-test.sh
 
+# Use uv run to activate the project venv (python and pyyaml resolve from there).
 .PHONY: check-no-code-changes
 check-no-code-changes:  ## Verify pending changes touch only comments/docs
-	@scripts/check-no-code-changes.sh $(ARGS)
+	@uv run python scripts/check_no_code_changes.py $(ARGS)
 
 .PHONY: check-docs-only
 check-docs-only: check-no-code-changes  ## Pre-deploy guard: safe to skip re-test?

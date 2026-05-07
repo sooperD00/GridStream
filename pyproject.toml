@@ -16,9 +16,10 @@ dev = [
     "pytest",
     "pytest-cov",
     "pre-commit",
-    "httpx",  # FastAPI's TestClient sits on httpx; needed for tests.
-    "jsonschema>=4.20",  # ADR-0011 schema enforcement smoke test (scripts/check-chart-schema.sh)
-    "pyyaml",  # required by scripts/check-no-code-changes.sh
+    "httpx",                # FastAPI's TestClient sits on httpx; needed for tests.
+    "jsonschema>=4.20",     # ADR-0011 schema enforcement smoke test (scripts/check-chart-schema.sh)
+    "pyyaml",               # required by scripts/check-no-code-changes.sh
+    "types-PyYAML",         # mypy stubs for pyyaml above
 ]
 
 # ─── Tool config (workspace-wide) ────────────────────────────────────────────
@@ -54,6 +55,10 @@ ignore = [
 "**/tests/**" = [
     "S101",  # `assert` is the whole point of a test
     "S603",  # subprocess.run inputs are controlled by the test author by definition
+]
+"scripts/check_no_code_changes.py" = [
+    "S603",  # subprocess args are caller-controlled, no shell interpretation
+    "S607",  # 'git' on PATH is intentional for portability
 ]
 
 [tool.mypy]
