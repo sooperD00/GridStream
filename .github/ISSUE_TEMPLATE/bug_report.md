@@ -6,7 +6,7 @@ labels: bug, triage
 ---
 
 ## 📝 Description
-A clear and concise description of the failure. 
+A clear and concise description of the failure.
 
 ## ⚠️ Safety & Compliance Impact
 Does this issue present a risk to humans, physical assets, or regulatory standing?

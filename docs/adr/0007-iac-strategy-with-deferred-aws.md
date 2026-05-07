@@ -41,5 +41,5 @@ The decision must satisfy the architectural argument first while preserving a cr
 
 ## References
 - [`docs/CONTEXT.md`](../CONTEXT.md) §2 — AWS as target environment
-- [`docs/remaining_sprints.md`](../remaining_sprints.md) §5 — Sprint 5 scope
+- [`docs/remaining-sprints.md`](../remaining-sprints.md) §5 — Sprint 5 scope
 - [`infra/terraform/README.md`](../../infra/terraform/README.md) — stub directory documentation (Sprint 1 deliverable)

@@ -2,71 +2,11 @@
 
 This document is the **planning surface** for sprint-by-sprint execution. Each sprint is scoped to fit within a single focused work session — about five hours for a human, or one planning-and-execution context window for an LLM pairing partner — and produces a coherent artifact. Read this document, the relevant ADRs, and the current repo state before generating a sprint commit-plan.
 
+For what's already shipped, see [`completed-sprints.md`](./completed-sprints.md) — the prologue this document continues.
+
 **Cut-off discipline.** Every sprint ends with the project in a defensible state. If you stop after Sprint N, the artifact is shippable as a reference deliverable on its own terms. This is by design — the project is structured to optimize for "I had to stop early but what I have is real" rather than "everything depends on the last commit landing."
 
 **Sequencing logic.** Sprint 1 ships the platform artifact before any service uses it, because a paved road defined by its first user isn't a road — it's a one-off. Sprint 2 exercises the road with a real workload, surfacing parameterization gaps. Sprint 3 layers GitOps and observability into the chart, so they become defaults for any future adopter rather than per-service work. Sprint 4 packages the result for organizational adoption. Each step is the natural prerequisite for the next; reordering them produces an artifact that's harder to adopt, not just one that takes longer to build.
-
----
-
-## 🟢 Sprint 1: The Paved Road
-
-**Goal (The Platform Itself):** Build the platform artifact that other teams will adopt. The reference service does not exist yet — that's intentional. A paved road is defined by its shape, not by what travels on it.
-
-### Concepts Exercised
-This sprint engages directly with:
-- Helm chart anatomy: `Chart.yaml`, `values.yaml`, `templates/`, `_helpers.tpl`
-- GitHub Actions reusable workflows: `workflow_call` trigger, inputs, secrets passing, `uses:` syntax from a calling repo
-- Liveness vs. readiness probes (when each fails, what K8s does next)
-- Pre-commit hook configuration with `ruff` and `mypy`
-- Multi-stage Dockerfile patterns (distroless or alpine base)
-
-### Tasks
-
-**1.1 — Paved-road Helm chart** (`charts/standard-service/`)
-- `Chart.yaml` (name: `standard-service`, version: `0.1.0`)
-- `values.yaml` with documented defaults: replica count, image, resource requests/limits, probe paths, service port, environment variables, optional sidecar slot
-- `templates/deployment.yaml` with liveness + readiness probes (overridable but defaulted to `/healthz` and `/readyz`)
-- `templates/service.yaml`
-- `templates/_helpers.tpl` for label/selector consistency (every team's chart inherits the same `app.kubernetes.io/*` labels)
-- `templates/configmap.yaml` for non-secret config
-- `charts/standard-service/README.md` documenting the contract: what `values.yaml` accepts, what teams must override, what they should not touch
-
-**1.2 — Reusable GitHub Actions workflow** (`.github/workflows/standard-python-service.yml`)
-- Trigger: `workflow_call`
-- Inputs: `python-version` (default 3.11), `coverage-threshold` (default 80), `image-name` (required)
-- Steps: checkout → setup Python → install deps via `uv` → `ruff check` → `mypy` → `pytest` with coverage gate → build container → push (registry push can be stubbed for now with a clear TODO that points to Sprint 4 or 5)
-- Document the call pattern: a team's repo includes this via `uses: <org>/gridstream/.github/workflows/standard-python-service.yml@v1`
-
-**1.3 — Service stub** (`src/standard_service_stub/`)
-- Minimal FastAPI service with `/healthz` and `/readyz` endpoints
-- Pydantic v2 models for request/response
-- One dummy endpoint that returns a structured response (e.g. `/echo`)
-- This service exists *to prove the chart and workflow function*. It is not the reference service (that's Sprint 2).
-
-**1.4 — Local dev plumbing**
-- `Makefile` with targets: `setup`, `lint`, `test`, `build`, `infra-up`, `infra-down`, `deploy-local`, `help`
-- `.pre-commit-config.yaml` with ruff and mypy
-- `pyproject.toml` for the stub service (using `uv` for deps)
-- `Dockerfile` (multi-stage; final stage distroless or alpine)
-- `kind/cluster.yaml` config for the local cluster
-
-**1.5 — Documentation**
-- `docs/paved-road.md`: 10-minute tutorial format — "How to adopt the paved road for your service"
-- Update `README.md` Quickstart to reflect what's actually runnable after Sprint 1
-- A short `make help` output that scans cleanly
-
-### Definition of Done
-- `make infra-up && make deploy-local` brings up Kind and deploys the stub service via `helm install`
-- `kubectl get pods` shows the stub service in `Ready` state with both probes green
-- The reusable workflow file is callable; CI is green on a dummy PR
-- A teammate could read `docs/paved-road.md` and adopt the chart for their own service in under an hour
-
-### Scope / Anti-scope
-- **In:** Chart, workflow, stub, Makefile, pre-commit, Dockerfile, local Kind setup, paved-road docs.
-- **Out:** Avro, Kafka producer/consumer logic, OTel instrumentation, lag-based HPA, ArgoCD (Sprints 2–3). Real AWS deploy (Sprint 5).
-
-### Cut-off Value
-Stopping here yields a *paved road without traffic* — a parameterized service chart and reusable CI workflow that any team in a 5+ team org could adopt to standardize their deployment surface.
 
 ---
 
@@ -201,15 +141,8 @@ Stopping here yields the full technical narrative — paved road, reference serv
 
 ### Housekeeping
 - [ ] Install an admission-policy engine (Kyverno or OPA Gatekeeper — pick during sprint) and ship a baseline policy that rejects pods without `runAsNonRoot: true`, `readOnlyRootFilesystem: true`, and `capabilities.drop` containing `ALL`. Server-side defense-in-depth complementing ADR-0011's `values.schema.json`: the schema catches misconfiguration at `helm install`; admission policy catches anything that bypasses the chart. Pairs with the Sprint 3 observability stack — policy violations should surface in Grafana alongside the golden-signals dashboards.
-- [ ] Image-tag SHA discipline. Today's `:dev` tag mutation required
-      `helm uninstall + make deploy-local` to force a rollout because
-      helm sees the manifest as unchanged. ArgoCD reconciliation +
-      content-addressed image refs (or imagePullPolicy: Always with
-      digests) makes this a non-issue.
-- [ ] Wire `make smoke-test` into the post-deploy verification path.
-      Can't run in plain CI without a deployed cluster; ArgoCD post-
-      sync hooks or a kind-in-CI job is the right home. The script
-      already exits non-zero on failure, so it's gate-ready.
+- [ ] Image-tag SHA discipline. Today's `:dev` tag mutation required `helm uninstall + make deploy-local` to force a rollout because helm sees the manifest as unchanged. ArgoCD reconciliation + content-addressed image refs (or imagePullPolicy: Always with digests) makes this a non-issue.
+- [ ] Wire `make smoke-test` into the post-deploy verification path. Can't run in plain CI without a deployed cluster; ArgoCD post-sync hooks or a kind-in-CI job is the right home. The script already exits non-zero on failure, so it's gate-ready.
 
 ---
 
@@ -274,11 +207,7 @@ Stopping here yields the complete platform story. The migration narrative is wha
 
 When registry push lands (per ADR-0006, Stage 4):
 
-- [ ] Wire registry push in `.github/workflows/standard-python-service.yml`
-      build job — replace the `[SPRINT-4-CLEANUP]` comment block with the
-      actual push step. Tag with both `${{ github.sha }}` (immutable, what
-      ArgoCD pins to) and a moving tag (`:main` or `:latest`) for human
-      convenience.
+- [ ] Wire registry push in `.github/workflows/standard-python-service.yml` build job — replace the `[SPRINT-4-CLEANUP]` comment block with the actual push step. Tag with both `${{ github.sha }}` (immutable, what ArgoCD pins to) and a moving tag (`:main` or `:latest`) for human convenience.
 - [ ] Add job-level `permissions:` to the build job:
 ```yaml
       build:
@@ -286,23 +215,10 @@ When registry push lands (per ADR-0006, Stage 4):
           contents: read    # checkout still needs this
           packages: write   # registry push
 ```
-      **Footgun:** job-level permissions *replace* workflow-level, they do
-      not merge. Dropping `contents: read` here will break `actions/checkout`
-      with a permissions error. The workflow-level `contents: read` does
-      not flow down once a job declares its own `permissions:` block.
-- [ ] Add a smoke-test step after build: `docker run --rm <image> --version`
-      (or equivalent health check). Catches "image built but won't start"
-      before it ships to the registry.
-- [ ] Revisit the `coverage-threshold` input. Has any adopter exercised
-      the override? If yes, are the cases legitimate, and should the
-      threshold be tuned? If no, the input is dead weight on the public
-      contract and worth removing at v2. **Trigger:** post-first-adopter,
-      same window as the version-pin audit.
-- [ ] Audit adopter version pins: run the GitHub code-search query for
-      `uses: sooperD00/gridstream/.github/workflows/standard-python-service.yml`
-      and confirm no adopter is still on a pre-push version that would
-      break when push lands. Coordinate cutover timing in #platform-standards.
-
+**Footgun:** job-level permissions *replace* workflow-level, they do not merge. Dropping `contents: read` here will break `actions/checkout` with a permissions error. The workflow-level `contents: read` does      not flow down once a job declares its own `permissions:` block.
+- [ ] Add a smoke-test step after build: `docker run --rm <image> --version` (or equivalent health check). Catches "image built but won't start" before it ships to the registry.
+- [ ] Revisit the `coverage-threshold` input. Has any adopter exercised the override? If yes, are the cases legitimate, and should the threshold be tuned? If no, the input is dead weight on the public contract and worth removing at v2. **Trigger:** post-first-adopter, same window as the version-pin audit.
+- [ ] Audit adopter version pins: run the GitHub code-search query for `uses: sooperD00/GridStream/.github/workflows/standard-python-service.yml` and confirm no adopter is still on a pre-push version that would break when push lands. Coordinate cutover timing in #platform-standards.
 
 
 ## ⚪ Sprint 5: AWS Deployment (Deferred / Stretch)
@@ -379,47 +295,22 @@ Cross-cutting items not tied to a sprint. Promote to a sprint commit when
 convenient.
 
 - [ ] CHANGELOG.md scaffolded with `[Unreleased]` section. Pre-@v1.
-- [ ] Semver policy documented in paved-road.md (patch/minor/major
-      contract for adopters pinning @v1). Pre-@v1.
-- [ ] CONTRIBUTING.md note on script-mode discipline: new scripts in
-      scripts/ need `chmod +x` so the executable bit is committed
-      (mode 100755). Today's debugging burned 10 minutes on a permission-
-      denied for check-chart-behavior.sh that was committed as 100644.
-- [ ] CONTRIBUTING.md or paved-road.md note on Python upgrade
-      coordination: .python-version, the Dockerfile's builder FROM, and
-      the distroless image's bundled Python must all agree. The ARG
-      pattern centralizes the *string* but not the underlying coupling.
-- [ ] Watch Dependabot PRs for Node-24-compatible action bumps
-      (checkout, setup-uv, docker/* still on Node 20). Forced switch
-      June 2, 2026; removal Sept 16. Existing weekly cadence should
-      catch each action's release; merge as they arrive.
+- [ ] Semver policy documented in paved-road.md (patch/minor/major contract for adopters pinning @v1). Pre-@v1.
+- [ ] CONTRIBUTING.md note on script-mode discipline: new scripts in scripts/ need `chmod +x` so the executable bit is committed (mode 100755). Today's debugging burned 10 minutes on a permission- denied for check-chart-behavior.sh that was committed as 100644.
+- [ ] CONTRIBUTING.md or paved-road.md note on Python upgrade coordination: .python-version, the Dockerfile's builder FROM, and the distroless image's bundled Python must all agree. The ARG pattern centralizes the *string* but not the underlying coupling.
+- [ ] Watch Dependabot PRs for Node-24-compatible action bumps (checkout, setup-uv, docker/* still on Node 20). Forced switch June 2, 2026; removal Sept 16. Existing weekly cadence should catch each action's release; merge as they arrive.
+- [ ] When a second script wants `PY_STRIP_DOCSTRINGS` or `PY_CANONICALIZE` (the inline Python heredocs in `check-no-code-changes.sh`), extract them to `scripts/lib/diff-helpers.sh` rather than copy-paste. Two real consumers will tell you the right interface; one consumer can only guess. Trigger phrases: a new `scripts/check-*.sh` that needs to canonicalize structured config, or any script that needs to compare Python ASTs.
 
 ## Tech debt
 
-Things we'd do differently if we were starting over, or know we'll have
-to revisit. Triggers usually internal — pain accumulating in CI, refactor
-opportunities, deferred SPRINT-N-CLEANUP markers coming due.
+Things we'd do differently if we were starting over, or know we'll have to revisit. Triggers usually internal — pain accumulating in CI, refactor opportunities, deferred SPRINT-N-CLEANUP markers coming due.
 
 *(empty for now)*
 
 ## Post-adoption
 
-Items waiting on external triggers — adopters arriving, scale crossing
-a threshold, a second cloud entering scope. Each item names its trigger.
-Promote when the trigger fires; delete from here when promoted.
+Items waiting on external triggers — adopters arriving, scale crossing a threshold, a second cloud entering scope. Each item names its trigger. Promote when the trigger fires; delete from here when promoted.
 
-- [ ] Document the adopter-version code-search query in paved-road.md
-      under a new "Platform team operations" section.
-      **Trigger:** first external adopter merges a `uses:` line.
-- [ ] Scripted adopter audit (GitHub API → weekly CSV → manager report).
-      **Trigger:** ≥2 external adopters. Worth a dedicated ADR at build
-      time — "how the platform team monitors adoption" is architectural.
-      Backstage's service catalog is the prebuilt alternative to revisit
-      per ADR-0008 at this point.
-- [ ] Regex-validate `image-name` input in standard-python-service.yml
-      to reject registry-prefixed or tagged values (currently caught
-      only by build-step failure). Cheap to add — a single shell step
-      with a regex check before the build job runs.
-      **Trigger:** first adopter who hits the double-tag failure and
-      asks "why didn't you just check this?" If nobody hits it, the
-      documentation in the input description is sufficient.
+- [ ] Document the adopter-version code-search query in paved-road.md under a new "Platform team operations" section. **Trigger:** first external adopter merges a `uses:` line.
+- [ ] Scripted adopter audit (GitHub API → weekly CSV → manager report). **Trigger:** ≥2 external adopters. Worth a dedicated ADR at build time — "how the platform team monitors adoption" is architectural. Backstage's service catalog is the prebuilt alternative to revisit per ADR-0008 at this point.
+- [ ] Regex-validate `image-name` input in standard-python-service.yml to reject registry-prefixed or tagged values (currently caught only by build-step failure). Cheap to add — a single shell step with a regex check before the build job runs. **Trigger:** first adopter who hits the double-tag failure and asks "why didn't you just check this?" If nobody hits it, the documentation in the input description is sufficient.

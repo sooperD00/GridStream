@@ -36,7 +36,8 @@ deployment:
   replicas: 1
 
   # Optional sidecars — full container specs, default empty.
-  # Sprint 3 will inject an OTel collector here; teams may add their own.
+  # [SPRINT-3-CLEANUP] Sprint 3 will inject an OTel collector here; teams
+  # may add their own.
   # Example:
   #   extraContainers:
   #     - name: otel-collector

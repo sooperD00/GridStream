@@ -81,7 +81,7 @@ async def readyz() -> HealthStatus:
     Kubernetes to *stop sending traffic* (the pod stays alive — maybe a
     downstream dependency is briefly unavailable, or the service is still
     warming caches). The stub has no downstream dependencies so readiness
-    collapses to liveness; Sprint 2's consumer will check Kafka and
+    collapses to liveness; [SPRINT-2-CLEANUP] Sprint 2's consumer will check Kafka and
     Schema Registry availability here.
     """
     return HealthStatus(status="ready")

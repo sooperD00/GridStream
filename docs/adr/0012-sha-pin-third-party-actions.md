@@ -62,7 +62,7 @@ namespace prestige is not a security boundary.
 
 3. **The cost lands on the platform team, not adopters.** Adopters
    inherit the SHA-pinned reusable workflow via `uses:
-   sooperD00/gridstream/...@v1`. They do not see, maintain, or update
+   sooperD00/GridStream/...@v1`. They do not see, maintain, or update
    the SHAs themselves. Dependabot runs in this repo. Adopters get
    the security posture for free.
 

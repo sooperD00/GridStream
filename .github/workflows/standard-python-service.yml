@@ -43,7 +43,7 @@ on:
           concatenates this with ":<commit-sha>" to produce the final
           tag, so passing a registry-prefixed or tagged value yields an
           invalid double-tag like "ghcr.io/foo:latest:abc123" that fails
-          at build time. Not currently enforced — see remaining_sprints.md
+          at build time. Not currently enforced — see remaining-sprints.md
           "Post-adoption" if this bites.
       working-directory:
         type: string

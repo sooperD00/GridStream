@@ -5,7 +5,7 @@
 # no shell, no package manager, no userland, just python + ca-certs + app.
 #
 # Build context MUST be the workspace root
-# (`make build` cmd runs from gridstream repo root where pyproject.toml and uv.lock must exist):
+# (`make build` cmd runs from GridStream repo root where pyproject.toml and uv.lock must exist):
 #     docker build -f packages/standard-service-stub/Dockerfile -t … .
 
 # Default for standalone `docker build`. `make build` overrides from .python-version

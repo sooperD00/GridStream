@@ -13,7 +13,7 @@ GridStream is designed to solve the "Post-Acquisition Chaos" common in tech merg
 *   **Validation:** Every producer uses **Pydantic** models to cast raw data into a strictly typed Python object before it touches the network.
 
 ### 2.2 Orchestration Layer (The "Backbone")
-*   **Kafka:** Acts as the persistent buffer. 
+*   **Kafka:** Acts as the persistent buffer.
 *   **Schema Registry:** The "Single Source of Truth." We utilize **Avro** to enforce schema compatibility.
     *   *Strategic Choice:* We use `BACKWARD_TRANSITIVE` compatibility to ensure new consumers can always read old data—crucial for replaying historical grid events for AI training.
 
@@ -28,7 +28,7 @@ GridStream is designed to solve the "Post-Acquisition Chaos" common in tech merg
 ## 3. The "Staff" Pillars
 
 ### 3.1 Standardization (The "Paved Road")
-To manage globally distributed teams (USA, EU, and India), we provide a **Shared Helm Library**. 
+To manage globally distributed teams (USA, EU, and India), we provide a **Shared Helm Library**.
 *   Instead of each team writing their own Kubernetes YAML, they inherit a template that includes pre-configured **Liveness/Readiness probes**, **Resource Limits**, and **Security Contexts**.
 *   This reduces "Configuration Drift" and ensures a Danish developer's service behaves identically to a US developer's service in production.
 
@@ -39,7 +39,7 @@ We implement **OpenTelemetry** as the universal instrumentation layer. We track 
 3.  **Schema Violation Rate:** Monitoring the DLQ to identify faulty firmware rollouts before they impact the grid.
 
 ### 3.3 Scalability Strategy: Consumer Lag HPA
-Standard HPA scales on CPU/Memory. In the energy sector, a service might be idle but have a massive backlog (e.g., during a grid "Demand Response" event). 
+Standard HPA scales on CPU/Memory. In the energy sector, a service might be idle but have a massive backlog (e.g., during a grid "Demand Response" event).
 *   **Decision:** We use a `Custom Metrics API` to scale based on `kafka_consumergroup_lag`. If the lag exceeds 10,000 messages, Kubernetes spins up additional pods to "drain the swamp."
 
 ### 3.4 Automated Quality Gates
@@ -71,7 +71,7 @@ To minimize cognitive load and prevent "unforced errors," the platform enforces 
 ### 6.1 Ethical Load Management (The "Wet Bulb" Protocol)
 GridCorp's role in grid stability involves high-stakes trade-offs. The platform must distinguish between "discretionary" load (e.g., a pool pump) and "life-sustaining" load (e.g., medical equipment or cooling during extreme heat).
 
-*   **Critical Asset Tagging:** Our Pydantic data models include a `priority_level` attribute derived from the Utility’s Customer Information System (CIS). 
+*   **Critical Asset Tagging:** Our Pydantic data models include a `priority_level` attribute derived from the Utility’s Customer Information System (CIS).
 *   **Safety Interlocks:** The ingestion engine is designed with "Fail-Open" logic. If the platform loses connectivity or cannot guarantee a safe dispatch state during a heatwave (defined by local weather API integration), it is programmed to default to "Grid-Follow" mode rather than "Aggressive Load Shed."
 
 ### 6.2 Fail-Safe State Management

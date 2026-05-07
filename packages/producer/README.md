@@ -7,7 +7,7 @@
 
 The synthetic energy producer lands in Sprint 2: reads NREL/Pecan Street CSV,
 Pydantic-validates each row, Avro-serializes via Schema Registry, publishes to
-`gridstream.readings`. See [`docs/remaining_sprints.md`](../../docs/remaining_sprints.md)
+`gridstream.readings`. See [`docs/remaining-sprints.md`](../../docs/remaining-sprints.md)
 §Sprint 2.
 
 This directory exists in Sprint 1 to land the workspace shape per

@@ -56,7 +56,7 @@ Each sprint produces a coherent artifact. Stop after any sprint and the result i
 | **🔴 Sprint 4** | The Migration Narrative | ADR record finalized, 5-team adoption playbook, scaffold-a-service script. *Stop here = adoption-ready.* |
 | **⚪ Sprint 5 (deferred)** | AWS Deployment | Terraform module for EKS, IRSA, MSK + Glue Schema Registry. *Reference enrichment.* |
 
-Sprint 5 is intentionally deferred. Local Kind/Docker Compose exercises every architectural argument the project needs to make; AWS deployment adds operational complexity without strengthening the technical story. Sprint 5 is reference enrichment scheduled separately from the project's primary sprint window, so the AWS work doesn't compete with the architectural decisions for time. (See [ADR-007](./docs/adr/0007-iac-strategy-with-deferred-aws.md).)
+Sprint 5 is intentionally deferred. Local Kind/Docker Compose exercises every architectural argument the project needs to make; AWS deployment adds operational complexity without strengthening the technical story. Sprint 5 is reference enrichment scheduled separately from the project's primary sprint window, so the AWS work doesn't compete with the architectural decisions for time. (See [ADR-0007](./docs/adr/0007-iac-strategy-with-deferred-aws.md).)
 
 ---
 
@@ -133,21 +133,22 @@ curl http://localhost:8000/healthz
 │   ├── CONTEXT.md
 │   ├── CONTRIBUTING.md
 │   ├── DISCOVERY.md
+│   ├── completed-sprints.md
+│   ├── remaining-sprints.md
 │   ├── paved-road.md                     # 10-min adoption tutorial
-│   ├── adr/                              # ADRs
-│   └── remaining_sprints.md
+│   └── adr/                              # ADRs
 ├── packages/                             # uv workspace members (ADR-0010)
 │   ├── standard-service-stub/            # Sprint 1 — the paved road's first traveler
-│   ├── producer/                         # Sprint 2
-│   ├── consumer/                         # Sprint 2
-│   └── models/                           # Sprint 2 — shared Pydantic + Avro models
+│   ├── producer/                         # [SPRINT-2-CLEANUP] Sprint 2
+│   ├── consumer/                         # [SPRINT-2-CLEANUP] Sprint 2
+│   └── models/                           # [SPRINT-2-CLEANUP] Sprint 2 — shared Pydantic + Avro models
 ├── kind/
 │   └── cluster.yaml                      # Local cluster config
 ├── infra/
-│   └── terraform/                        # AWS modules (Sprint 5, stubbed)
-├── schemas/                              # Avro contracts (Sprint 2)
-├── data/                                 # Sample energy CSVs (Sprint 2)
-├── scripts/                              # scaffold-a-service, etc. (Sprint 4)
+│   └── terraform/                        # [SPRINT-5-CLEANUP] AWS modules (Sprint 5, stubbed)
+├── schemas/                              # [SPRINT-2-CLEANUP] Avro contracts (Sprint 2)
+├── data/                                 # [SPRINT-2-CLEANUP] Sample energy CSVs (Sprint 2)
+├── scripts/                              # [SPRINT-4-CLEANUP] scaffold-a-service, etc. (Sprint 4)
 ├── Makefile
 ├── pyproject.toml                        # Workspace root (virtual; ADR-0010)
 └── .pre-commit-config.yaml

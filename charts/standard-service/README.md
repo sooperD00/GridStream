@@ -28,7 +28,7 @@ helm upgrade --install <release-name> oci://ghcr.io/sooperD00/charts/standard-se
 ```
 
 > The OCI registry path above is the published location. The chart isn't
-> published yet (see [remaining_sprints.md] — publishing is scheduled with
+> published yet (see [remaining-sprints.md] — publishing is scheduled with
 > Sprint 4). Until then, install the chart directly from this repo: `make deploy-local`.
 > [SPRINT-4-CLEANUP] When the chart publishes to OCI, remove the "isn't
 > published yet" qualifier; keep `make deploy-local` as the local-development
@@ -143,7 +143,7 @@ This is the *reason* the four tiers above are real tiers and not aspirational on
 
 `deployment.extraContainers` is a free-form list of full container specs,
 default empty. The shape was chosen over a typed `sidecar:` block because
-Sprint 3 will inject both an OTel collector *and* (potentially) a
+[SPRINT-3-CLEANUP] Sprint 3 will inject both an OTel collector *and* (potentially) a
 kafka-lag exporter, and a list scales more cleanly than two specific blocks.
 
 ```yaml
@@ -170,7 +170,7 @@ deployment:
 | NetworkPolicy | Future |
 | ServiceMonitor (Prometheus) | [SPRINT-3-CLEANUP] Sprint 3 |
 
-These are deliberately deferred per the [sprint roadmap](../../docs/remaining_sprints.md).
+These are deliberately deferred per the [sprint roadmap](../../docs/remaining-sprints.md).
 The chart is *small on purpose* in Sprint 1 — adding more before adopters
 exercise the basics produces parameterization that's wrong in invisible ways.
 

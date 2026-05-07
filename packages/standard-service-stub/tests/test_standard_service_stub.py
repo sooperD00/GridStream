@@ -7,7 +7,7 @@ nothing about the workflow itself. They are deliberately minimal — exercising
 endpoints, validation, and request/response shape — and stay in place
 permanently as the smoke test the workflow re-runs on every change.
 
-Sprint 2 adds domain-driven tests in the producer, consumer, and models
+[SPRINT-2-CLEANUP] Sprint 2 adds domain-driven tests in the producer, consumer, and models
 packages; they are peers to these tests, not replacements.
 """
 

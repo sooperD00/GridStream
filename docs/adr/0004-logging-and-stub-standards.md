@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-In high-concurrency, regulated environments like GridStream, "silent" failures or untracked technical debt pose significant operational risks. 
+In high-concurrency, regulated environments like GridStream, "silent" failures or untracked technical debt pose significant operational risks.
 1. **The Danger of `print()`:** In containerized EKS environments, `stdout` via `print()` is often unbuffered or improperly captured by log aggregators (CloudWatch/Fluentbit), leading to "lost" debug information during grid events. Furthermore, `print` lacks severity levels (INFO, WARN, ERROR), making automated alerting impossible.
 2. **The Risk of "Silent" TODOs:** Undocumented `# TODO` comments often become permanent technical debt that is invisible to project management and only discovered during a system failure.
 
@@ -14,7 +14,7 @@ In high-concurrency, regulated environments like GridStream, "silent" failures o
 3. **Structured Stubs:** Generic `# TODO` comments are prohibited in production-path code. Out-of-scope logic must be handled via **Structured Stubs**:
    - Use a `NotImplementedError` for code paths that should not be reached.
    - Include a docstring referencing the specific Sprint or Ticket ID (e.g., `[GRID-102]`).
-   - Example: 
+   - Example:
      ```python
      def validate_grid_frequency():
          # [GRID-102]: To be implemented in Sprint 5

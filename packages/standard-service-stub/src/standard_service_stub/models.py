@@ -1,7 +1,7 @@
 """Pydantic v2 models for the stub service.
 
 Kept deliberately minimal — just enough to prove the request/response
-contract that adopting teams' models will follow. Sprint 2's reference
+contract that adopting teams' models will follow. [SPRINT-2-CLEANUP] Sprint 2's reference
 service exercises the full SCADA + IoT model surface (see
 ``schemas/power_reading.avsc`` and ``src/models/power_reading.py``); these
 are a structured stand-in.

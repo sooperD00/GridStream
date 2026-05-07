@@ -29,10 +29,10 @@ GridStream is the foundational integration layer for **GridCorp**. Following the
 ### Development Environment (Sprints 1–4)
 *   **Local Cluster:** **Kind** (Kubernetes-in-Docker).
 *   **Local Streaming:** Self-hosted Kafka + Confluent Schema Registry via Docker Compose.
-*   **Why local-first:** Every architectural decision in this project — Helm parameterization, GitOps sync, lag-based HPA, OpenTelemetry trace propagation, schema evolution, DLQ routing — can be exercised and demonstrated locally. AWS deployment is targeted but deferred to Sprint 5 so the AWS work doesn't compete with the architectural decisions for time. See [ADR-007](./adr/0007-iac-strategy-with-deferred-aws.md).
+*   **Why local-first:** Every architectural decision in this project — Helm parameterization, GitOps sync, lag-based HPA, OpenTelemetry trace propagation, schema evolution, DLQ routing — can be exercised and demonstrated locally. AWS deployment is targeted but deferred to Sprint 5 so the AWS work doesn't compete with the architectural decisions for time. See [ADR-0007](./adr/0007-iac-strategy-with-deferred-aws.md).
 
 ### Workload Characteristics
-*   **Data Velocity:** 
+*   **Data Velocity:**
     *   *Normal:* 2,000 events/sec.
     *   *Grid Event:* 20,000+ events/sec (10x burst).
 *   **Regulatory Context:** Must adhere to NERC/CIP-style reliability mindsets; data integrity is a safety concern, not just a feature.

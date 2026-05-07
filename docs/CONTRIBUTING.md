@@ -14,7 +14,8 @@ Welcome. This project prioritizes system stability, schema integrity, and observ
 ## 🛠 Quality Standards
 *   **Testing:** We aim for 80%+ coverage. Run `make test` before pushing.
 > note: The 80% floor is calibrated as "high enough to catch most regressions, low enough that contributors aren't gaming coverage by writing tests against trivial getters" and is a backstop, not a target. Coverage measures *exercised* code, not *correct* code — a 95% covered codebase with shallow tests is worse than an 80% covered codebase with tests that assert behavior. Aim for the latter. Calibration is in the range Google's testing team describes as "acceptable" (60%) to "commendable" (75%); we picked the upper end of that band as our standard. See [References](#references) below.
-*   **Linting:** We enforce `ruff` and `mypy` for type safety.
+*   **Linting:** We enforce `ruff` (Python style and bugs), `mypy` (Python type safety), and `shellcheck` (shell script bugs and portability) via pre-commit hooks. Run `make lint` to invoke them on demand.
+*   **Pre-deploy check:** For changes you believe are docs/comments only, `make check-docs-only` verifies the working tree against `main` and confirms no executable code changed — exit 0 means safe to skip re-test before deploy. See `scripts/check-no-code-changes.sh` for the dispatch logic and the metadata allowlist.
 *   **Lockfile hygiene:** CI runs `uv sync --frozen` and will fail if `uv.lock` is stale relative to `pyproject.toml`. If you edit dependencies, run `uv sync` locally and commit the regenerated `uv.lock` alongside your `pyproject.toml` change. CI's error message (`The lockfile at uv.lock needs to be updated...`) means exactly this — not a CI bug.
 *   **Documentation:** Updates to core logic must be reflected in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

@@ -34,8 +34,8 @@ This tutorial walks Stages 1 through 3. Stage 4 (ArgoCD) lands in Sprint 3.
 #    Python 3.11+, Docker, kind, helm 3, uv (https://docs.astral.sh/uv/)
 
 # 1. Clone, set up, run
-git clone https://github.com/sooperD00/gridstream.git
-cd gridstream
+git clone https://github.com/sooperD00/GridStream.git
+cd GridStream
 make setup
 make infra-up
 make deploy-local
@@ -97,7 +97,7 @@ on: [push, pull_request]
 
 jobs:
   ci:
-    uses: sooperD00/gridstream/.github/workflows/standard-python-service.yml@v1
+    uses: sooperD00/GridStream/.github/workflows/standard-python-service.yml@v1
     with:
       image-name: my-team-service
 ```
@@ -110,7 +110,7 @@ That's it. The workflow does:
 4. `pytest tests` with `--cov-fail-under=80`.
 5. `docker buildx build` — container build (no push yet; see the registry-push
    TODO in the workflow file and [ADR-0006](./adr/0006-gitops-adoption-path.md)
-   for why push lands in Sprint 4 or 5).
+   for why push lands in Sprint 4 or 5). [SPRINT-4-CLEANUP]
 
 Inputs you can override:
 
@@ -165,15 +165,15 @@ What you inherit without configuring:
   seccomp).
 - Container-level security context (`readOnlyRootFilesystem`, all caps
   dropped, no privilege escalation).
-- `app.kubernetes.io/*` labels including `part-of: gridstream`. Observability
+- `app.kubernetes.io/*` labels including `part-of: gridstream`. [SPRINT-3-CLEANUP] Observability
   selectors and ArgoCD selectors will rely on these in Sprint 3.
 
 What you don't get yet, with sprint pointers:
 
-- HPA — Sprint 3, lag-based per [ADR-0002](./adr/0002-consumer-lag-based-autoscaling.md).
-- Ingress — Sprint 3.
-- ServiceAccount with IRSA — Sprint 5.
-- Job/CronJob template — added in Sprint 2 if needed.
+- HPA — [SPRINT-3-CLEANUP] Sprint 3, lag-based per [ADR-0002](./adr/0002-consumer-lag-based-autoscaling.md).
+- Ingress — [SPRINT-3-CLEANUP] Sprint 3.
+- ServiceAccount with IRSA — [SPRINT-5-CLEANUP] Sprint 5.
+- Job/CronJob template — [SPRINT-2-CLEANUP] added in Sprint 2 if needed.
 
 ---
 
@@ -236,7 +236,7 @@ stays clean. This is the right tool for "I need to inspect the network
 namespace from inside the pod" or "I need to verify the mounted ConfigMap
 contents from the container's perspective."
 
-### 4. Sprint 3 — observability stack
+### 4. Sprint 3 — observability stack [SPRINT-3-CLEANUP]
 
 When Sprint 3 lands, the debugging surface widens:
 
@@ -272,7 +272,7 @@ dependencies and per-service container builds.
 
 ```
 your-service-repo/
-├── Makefile                # copy from gridstream, adjust STUB_* vars
+├── Makefile                # copy from GridStream, adjust STUB_* vars
 ├── pyproject.toml          # single-project (no [tool.uv.workspace] block)
 ├── Dockerfile              # distroless final stage; no `--package` flag
 ├── .github/workflows/ci.yml  # 5-line caller of the reusable workflow
@@ -299,7 +299,7 @@ adopt the workspace pattern then — it's additive.
 - [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) — system-level design context.
 - [`docs/adr/`](./adr/) — every decision the road encodes, with the
   reasoning preserved.
-- [`docs/remaining_sprints.md`](./remaining_sprints.md) — what's coming
+- [`docs/remaining-sprints.md`](./remaining-sprints.md) — what's coming
   next; in particular, when Stage 4 (ArgoCD) and the observability stack
   arrive.
 

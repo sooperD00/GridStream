@@ -60,7 +60,7 @@ The reference service deploys via the platform layer's artifacts. No bespoke dep
 
 ## 4. Sprint Roadmap
 
-See [`remaining_sprints.md`](./remaining_sprints.md) for the per-sprint task breakdown, prerequisites, and Definition of Done.
+See [`remaining-sprints.md`](./remaining-sprints.md) for the per-sprint task breakdown, prerequisites, and Definition of Done.
 
 | Sprint | Focus | Coherent Cut-off Artifact |
 |---|---|---|
@@ -97,20 +97,25 @@ Each sprint is scoped to a single development session (~5 hours) and produces a 
 .
 ├── .github/workflows/       # Reusable CI templates (Sprint 1)
 ├── charts/                  # Paved-road Helm chart (Sprint 1)
-├── data/                    # Sample energy CSVs
+├── data/                    # Sample energy CSVs (Sprint 2)
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── CONTEXT.md
 │   ├── CONTRIBUTING.md
 │   ├── DISCOVERY.md
-│   ├── adr/
-│   └── remaining_sprints.md
+│   ├── completed-sprints.md
+│   ├── remaining-sprints.md
+│   ├── paved-road.md
+│   └── adr/
 ├── infra/
 │   └── terraform/           # AWS modules (Sprint 5, stubbed)
+├── kind/                    # Local Kind cluster config (Sprint 1)
+├── packages/                # uv workspace members (ADR-0010)
+│   ├── standard-service-stub/   # Sprint 1 — paved road's first traveler
+│   ├── producer/                # [SPRINT-2-CLEANUP] Sprint 2
+│   ├── consumer/                # [SPRINT-2-CLEANUP] Sprint 2
+│   └── models/                  # [SPRINT-2-CLEANUP] Sprint 2 — shared Pydantic + Avro
 ├── schemas/                 # Avro contracts (Sprint 2)
 ├── scripts/                 # scaffold-a-service, etc. (Sprint 4)
-├── src/
-│   ├── producer/            # (Sprint 2)
-│   └── consumer/            # (Sprint 2)
 └── Makefile
 ```

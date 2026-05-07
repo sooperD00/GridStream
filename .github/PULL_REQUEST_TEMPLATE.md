@@ -8,7 +8,7 @@
 - [ ] Standardization/Refactor
 
 ## 🏗 Architectural Alignment
-- [ ] **ADR Check:** Does this change align with existing [ADRs](docs/adr/)? 
+- [ ] **ADR Check:** Does this change align with existing [ADRs](docs/adr/)?
 - [ ] **Schema Check:** If modified, is the Avro schema backward-compatible?
 - [ ] **Observability:** Have OpenTelemetry traces/metrics been added/updated?
 - [ ] **Scale:** Has this been tested for high-volume telemetry (10k+ msg/s)?
