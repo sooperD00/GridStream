@@ -86,7 +86,7 @@ jobs:
         # Microsoft's K8s team filled the gap and the community settled there
         # (it's the de facto standard for Helm-in-CI pipelines now). Hence `azure/`.
         # This is a CI install path, nothing to do with what the action is coupled to.
-        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2  # v5.0.0
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310  # v5.0.1
 
       - name: Validate chart behavior (ADR-0011)
         # Runs helm lint + 3× helm template (1 known-good, 2 known-bad).
